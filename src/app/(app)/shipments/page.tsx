@@ -32,7 +32,10 @@ export default async function ShipmentsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Shipments</h1>
         {canCreate && (
-          <Button render={<Link href="/shipments/new">New Shipment</Link>} />
+          <Button
+            nativeButton={false}
+            render={<Link href="/shipments/new">New Shipment</Link>}
+          />
         )}
       </div>
 

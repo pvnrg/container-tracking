@@ -85,6 +85,8 @@ export function ShipmentForm() {
   } = useForm<FormValues>({
     resolver: zodResolver(shipmentSchema),
     defaultValues: {
+      dischargePort: "" as DischargePort,
+      destinationWarehouse: "" as RwandanDestination,
       containers: [emptyContainer],
     },
   })
@@ -156,7 +158,11 @@ export function ShipmentForm() {
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select discharge port" />
+                    <SelectValue placeholder="Select discharge port">
+                      {(value: DischargePort | null) =>
+                        value ? DISCHARGE_PORT_LABELS[value] : "Select discharge port"
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(DischargePort).map((port) => (
@@ -179,7 +185,13 @@ export function ShipmentForm() {
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select destination warehouse" />
+                    <SelectValue placeholder="Select destination warehouse">
+                      {(value: RwandanDestination | null) =>
+                        value
+                          ? DESTINATION_WAREHOUSE_LABELS[value]
+                          : "Select destination warehouse"
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(RwandanDestination).map((dest) => (
