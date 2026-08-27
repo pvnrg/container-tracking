@@ -1,0 +1,280 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  LOGISTICS_OPERATOR
+  TRANSPORTER
+}
+
+enum DischargePort {
+  DAR_ES_SALAAM
+  MOMBASA
+}
+
+enum RwandanDestination {
+  NYANZA_KICUKIRO
+  RWAMAGANA_INDUSTRIAL_ZONE
+}
+
+enum ShipmentStatus {
+  SHIPPED_ON_BOARD
+  IN_TRANSIT_SEA
+  ARRIVED_PORT_OF_DISCHARGE
+  CUSTOMS_PROCESSING
+  CUSTOMS_CLEARED
+  LOADED_ROAD_TRANSIT
+  ARRIVED_DESTINATION
+  OFFLOADED
+  COMPLETED
+}
+
+enum ContainerStatus {
+  ON_VESSEL
+  DISCHARGED_AT_PORT
+  IN_TRANSIT_TRUCK
+  DELIVERED_WAREHOUSE
+  OFFLOADED
+  EMPTY_RETURNED_TO_DEPOT
+}
+
+enum DocumentStage {
+  ENTRY_LEVEL
+  PORT_CLEARANCE
+  ROAD_TRANSIT
+  FINAL_CLEARANCE
+}
+
+enum DocumentType {
+  COMMERCIAL_INVOICE
+  PACKING_LIST
+  BILL_OF_LADING
+  CERTIFICATE_OF_ANALYSIS
+  CUSTOMS_WH7
+  CUSTOMS_T1
+  CUSTOMS_IM4
+  TRANSPORTER_RATE_AGREEMENT
+  DESTINATION_CLEARANCE
+  DELIVERY_NOTE
+}
+
+enum NotificationChannel {
+  SYSTEM
+  WHATSAPP
+  BOTH
+}
+
+// -------------------------------------------------------------
+// USER & RBAC
+// -------------------------------------------------------------
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  name     String
+  phone    String // Standard E.164 format for WhatsApp notifications
+  password String // bcrypt hash, used by the Credentials auth provider
+
+  role      UserRole @default(LOGISTICS_OPERATOR)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedShipments Shipment[]      @relation("TransporterShipments")
+  createdShipments  Shipment[]      @relation("OperatorCreatedShipments")
+  uploadedDocuments Document[]
+  notifications     Notification[]
+  auditLogs         ShipmentAudit[]
+
+  @@index([role])
+}
+
+// -------------------------------------------------------------
+// CORE SHIPMENT & BL
+// -------------------------------------------------------------
+
+model Shipment {
+  id                   String              @id @default(uuid())
+  blNumber             String              @unique
+  shippingLine         String // e.g. MSC
+  vesselName           String? // e.g. MSC ASYA
+  voyageNumber         String? // e.g. MA622R
+  bookingRef           String?
+  originCountry        String // India, China, UAE, USA, Indonesia, etc.
+  originPort           String? // e.g. ENNORE, INDIA
+  dischargePort        DischargePort // DAR_ES_SALAAM or MOMBASA
+  destinationWarehouse RwandanDestination? // NYANZA_KICUKIRO or RWAMAGANA_INDUSTRIAL_ZONE
+
+  shipperName   String?
+  consigneeName String?
+  notifyParty   String?
+
+  shippedOnBoardDate  DateTime?
+  currentEta          DateTime // Maintained and updated daily
+  actualDischargeDate DateTime?
+
+  status ShipmentStatus @default(SHIPPED_ON_BOARD)
+
+  // Transporter Commercial Details
+  transporterId        String?
+  transporter          User?     @relation("TransporterShipments", fields: [transporterId], references: [id])
+  agreedTransportPrice Decimal?  @db.Decimal(12, 2)
+  currency             String    @default("USD")
+  priceAgreedAt        DateTime?
+  isLoadedOnTruck      Boolean   @default(false)
+
+  // System Flags
+  sevenDayAlertSent Boolean @default(false)
+
+  createdById String
+  createdBy   User   @relation("OperatorCreatedShipments", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  containers    Container[]
+  documents     Document[]
+  notifications Notification[]
+  auditLogs     ShipmentAudit[]
+
+  @@index([blNumber])
+  @@index([status])
+  @@index([currentEta])
+}
+
+// -------------------------------------------------------------
+// CONTAINERS & INVENTORY
+// -------------------------------------------------------------
+
+model Container {
+  id         String   @id @default(uuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  containerNumber String
+  containerType   String  @default("40_HIGH_CUBE")
+  sealNumber      String?
+  tareWeightKg    Decimal? @db.Decimal(10, 2)
+  grossWeightKg   Decimal? @db.Decimal(10, 2)
+  volumeCbm       Decimal? @db.Decimal(10, 2)
+
+  inventoryReference String // e.g. "Woodfree Paper in Reels"
+  itemQuantity       Int?
+
+  status             ContainerStatus @default(ON_VESSEL)
+  offloadScheduledAt DateTime?
+  actualOffloadedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  detentionTracker DetentionTracker?
+
+  @@unique([shipmentId, containerNumber])
+  @@index([containerNumber])
+}
+
+// -------------------------------------------------------------
+// 30-DAY DETENTION TRACKING
+// -------------------------------------------------------------
+
+model DetentionTracker {
+  id          String    @id @default(uuid())
+  containerId String    @unique
+  container   Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+
+  freeTimeDays        Int       @default(30)
+  clockStartDate      DateTime? // Timestamp when discharged at seaport
+  deadlineDate        DateTime? // clockStartDate + 30 days
+  returnedToDepotDate DateTime?
+
+  day15AlertSent Boolean @default(false)
+  day22AlertSent Boolean @default(false)
+  day28AlertSent Boolean @default(false)
+  isOverdue      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deadlineDate])
+  @@index([isOverdue])
+}
+
+// -------------------------------------------------------------
+// STAGE-WISE ATTACHMENTS
+// -------------------------------------------------------------
+
+model Document {
+  id         String   @id @default(uuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  stage    DocumentStage
+  type     DocumentType
+  fileUrl  String
+  fileName String
+  fileSize Int
+  mimeType String
+
+  isVerified Boolean   @default(false)
+  verifiedAt DateTime?
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shipmentId, stage])
+}
+
+// -------------------------------------------------------------
+// NOTIFICATIONS & AUDITS
+// -------------------------------------------------------------
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shipmentId String?
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+
+  title   String
+  message String
+  channel NotificationChannel @default(BOTH)
+  isRead  Boolean             @default(false)
+
+  waMessageSid String?
+  waSentAt     DateTime?
+  waStatus     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model ShipmentAudit {
+  id         String   @id @default(uuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action   String
+  oldValue Json?
+  newValue Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([shipmentId])
+}
