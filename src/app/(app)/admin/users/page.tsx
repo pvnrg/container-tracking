@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ROLE_LABELS } from "@/lib/auth-utils"
+import { ROLE_BADGE_CLASSES, ROLE_LABELS } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
 
 export default async function UsersPage() {
@@ -47,10 +47,19 @@ export default async function UsersPage() {
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.phone}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{ROLE_LABELS[u.role]}</Badge>
+                    <Badge variant="outline" className={ROLE_BADGE_CLASSES[u.role]}>
+                      {ROLE_LABELS[u.role]}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={u.isActive ? "outline" : "destructive"}>
+                    <Badge
+                      variant={u.isActive ? "outline" : "destructive"}
+                      className={
+                        u.isActive
+                          ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : undefined
+                      }
+                    >
                       {u.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>

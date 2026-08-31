@@ -14,6 +14,7 @@ import {
 import { prisma } from "@/lib/prisma"
 import {
   DISCHARGE_PORT_LABELS,
+  SHIPMENT_STATUS_BADGE_CLASSES,
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
 
@@ -76,7 +77,10 @@ export default async function ShipmentsPage() {
                 <TableCell>{DISCHARGE_PORT_LABELS[s.dischargePort]}</TableCell>
                 <TableCell>{s._count.containers}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">
+                  <Badge
+                    variant="outline"
+                    className={SHIPMENT_STATUS_BADGE_CLASSES[s.status]}
+                  >
                     {SHIPMENT_STATUS_LABELS[s.status]}
                   </Badge>
                 </TableCell>

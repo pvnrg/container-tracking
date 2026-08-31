@@ -29,6 +29,7 @@ import {
 import {
   DOCUMENT_STAGE_LABELS,
   DOCUMENT_STAGE_NOTES,
+  DOCUMENT_STATUS_BADGE_CLASSES,
   DOCUMENT_TYPE_LABELS,
   STAGE_DOCUMENT_TYPES,
 } from "@/lib/document-labels"
@@ -96,10 +97,12 @@ function StageCard({
             const docsForType = documents.filter((d) => d.type === type)
             const verified = docsForType.some((d) => d.isVerified)
             const uploaded = docsForType.length > 0
+            const status = verified ? "verified" : uploaded ? "uploaded" : "missing"
             return (
               <Badge
                 key={type}
-                variant={verified ? "default" : uploaded ? "secondary" : "outline"}
+                variant="outline"
+                className={DOCUMENT_STATUS_BADGE_CLASSES[status]}
               >
                 {DOCUMENT_TYPE_LABELS[type]}
                 {verified ? " · Verified" : uploaded ? " · Uploaded" : " · Missing"}
@@ -166,7 +169,12 @@ function DocumentRowItem({
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <Badge variant={doc.isVerified ? "default" : "outline"}>
+        <Badge
+          variant="outline"
+          className={
+            DOCUMENT_STATUS_BADGE_CLASSES[doc.isVerified ? "verified" : "uploaded"]
+          }
+        >
           {doc.isVerified ? "Verified" : "Unverified"}
         </Badge>
         <a

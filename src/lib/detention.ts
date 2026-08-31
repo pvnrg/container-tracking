@@ -22,8 +22,8 @@ export const DETENTION_RISK_LABELS: Record<DetentionRiskLevel, string> = {
 }
 
 export const DETENTION_RISK_CLASSES: Record<DetentionRiskLevel, string> = {
-  normal: "border-emerald-600/40 text-emerald-700 dark:text-emerald-400",
-  warning: "border-amber-600/40 text-amber-700 dark:text-amber-400",
-  critical: "border-destructive/40 text-destructive",
-  overdue: "border-destructive bg-destructive/10 text-destructive font-medium",
+  normal: "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  warning: "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  critical: "border-destructive/40 bg-destructive/10 text-destructive",
+  overdue: "border-destructive bg-destructive/15 text-destructive font-medium",
 }

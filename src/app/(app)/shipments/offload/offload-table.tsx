@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  CONTAINER_STATUS_BADGE_CLASSES,
   CONTAINER_STATUS_LABELS,
   DESTINATION_WAREHOUSE_LABELS,
 } from "@/lib/shipment-labels"
@@ -120,7 +121,6 @@ function OffloadRow({ container }: { container: OffloadContainer }) {
 
   const isDirty =
     scheduledAt !== toDatetimeLocalValue(container.offloadScheduledAt)
-  const isOffloaded = container.actualOffloadedAt !== null
 
   const handleSaveSchedule = async () => {
     setIsSavingSchedule(true)
@@ -173,7 +173,10 @@ function OffloadRow({ container }: { container: OffloadContainer }) {
           : "Not yet allocated"}
       </TableCell>
       <TableCell>
-        <Badge variant={isOffloaded ? "default" : "outline"}>
+        <Badge
+          variant="outline"
+          className={CONTAINER_STATUS_BADGE_CLASSES[container.status]}
+        >
           {CONTAINER_STATUS_LABELS[container.status]}
         </Badge>
       </TableCell>

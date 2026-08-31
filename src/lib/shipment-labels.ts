@@ -60,3 +60,37 @@ export const CONTAINER_STATUS_LABELS: Record<ContainerStatus, string> = {
   OFFLOADED: "Offloaded",
   EMPTY_RETURNED_TO_DEPOT: "Empty Returned to Depot",
 }
+
+// Soft, semantic badge colors grouped by journey phase: at sea (sky),
+// at port/customs (amber), inland transit (violet), done (emerald).
+export const SHIPMENT_STATUS_BADGE_CLASSES: Record<ShipmentStatus, string> = {
+  SHIPPED_ON_BOARD: "border-sky-600/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  IN_TRANSIT_SEA: "border-sky-600/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  ARRIVED_PORT_OF_DISCHARGE:
+    "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  CUSTOMS_PROCESSING:
+    "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  CUSTOMS_CLEARED:
+    "border-violet-600/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  LOADED_ROAD_TRANSIT:
+    "border-violet-600/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  ARRIVED_DESTINATION:
+    "border-violet-600/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  OFFLOADED:
+    "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  COMPLETED:
+    "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+}
+
+export const CONTAINER_STATUS_BADGE_CLASSES: Record<ContainerStatus, string> = {
+  ON_VESSEL: "border-sky-600/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  DISCHARGED_AT_PORT:
+    "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  IN_TRANSIT_TRUCK:
+    "border-violet-600/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  DELIVERED_WAREHOUSE:
+    "border-violet-600/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  OFFLOADED:
+    "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  EMPTY_RETURNED_TO_DEPOT: "border-border bg-muted text-muted-foreground",
+}

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { signIn } from "next-auth/react"
+import { Ship } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,8 +54,11 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
+    <Card className="w-full max-w-sm shadow-lg shadow-primary/5">
+      <CardHeader className="items-center text-center">
+        <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <Ship className="size-6" />
+        </div>
         <CardTitle>Logistics &amp; Container Tracking</CardTitle>
         <CardDescription>Sign in to your account</CardDescription>
       </CardHeader>

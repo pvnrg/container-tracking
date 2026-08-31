@@ -13,8 +13,11 @@ import {
 } from "@/components/ui/table"
 import { prisma } from "@/lib/prisma"
 import {
+  CONTAINER_STATUS_BADGE_CLASSES,
+  CONTAINER_STATUS_LABELS,
   DESTINATION_WAREHOUSE_LABELS,
   DISCHARGE_PORT_LABELS,
+  SHIPMENT_STATUS_BADGE_CLASSES,
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
 
@@ -97,7 +100,10 @@ export default async function ShipmentDetailPage({
             {shipment.containers.length === 1 ? "" : "s"}
           </p>
         </div>
-        <Badge variant="secondary">
+        <Badge
+          variant="outline"
+          className={SHIPMENT_STATUS_BADGE_CLASSES[shipment.status]}
+        >
           {SHIPMENT_STATUS_LABELS[shipment.status]}
         </Badge>
       </div>
@@ -145,7 +151,12 @@ export default async function ShipmentDetailPage({
                   <TableCell>{c.grossWeightKg?.toString() ?? "—"}</TableCell>
                   <TableCell>{c.inventoryReference}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{c.status}</Badge>
+                    <Badge
+                      variant="outline"
+                      className={CONTAINER_STATUS_BADGE_CLASSES[c.status]}
+                    >
+                      {CONTAINER_STATUS_LABELS[c.status]}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}

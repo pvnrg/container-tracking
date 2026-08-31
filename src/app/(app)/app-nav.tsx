@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { UserRole } from "@prisma/client"
+import { Ship } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -51,8 +52,13 @@ export function AppNav({
   return (
     <header className="flex items-center justify-between border-b bg-background px-6 py-3">
       <div className="flex items-center gap-6">
-        <span className="text-sm font-semibold">Container Tracking</span>
-        <nav className="flex items-center gap-4 text-sm">
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Ship className="size-4" />
+          </span>
+          Container Tracking
+        </span>
+        <nav className="flex items-center gap-1 text-sm">
           {links
             .filter((l) => l.show)
             .map((l) => (
@@ -60,8 +66,8 @@ export function AppNav({
                 key={l.href}
                 href={l.href}
                 className={cn(
-                  "flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground",
-                  pathname === l.href && "font-medium text-foreground"
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+                  pathname === l.href && "bg-primary/10 font-medium text-primary"
                 )}
               >
                 {l.label}
