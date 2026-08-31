@@ -25,3 +25,14 @@ export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
   OFFLOADED: "Offloaded & Unsealed",
   COMPLETED: "Empty Container Returned",
 }
+
+// Statuses reached at or after physical discharge at the seaport.
+export const ARRIVED_OR_LATER_STATUSES: ShipmentStatus[] = [
+  "ARRIVED_PORT_OF_DISCHARGE",
+  "CUSTOMS_PROCESSING",
+  "CUSTOMS_CLEARED",
+  "LOADED_ROAD_TRANSIT",
+  "ARRIVED_DESTINATION",
+  "OFFLOADED",
+  "COMPLETED",
+]

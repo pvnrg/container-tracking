@@ -26,6 +26,11 @@ export function AppNav({
       label: "New Shipment",
       show: role === "ADMIN" || role === "LOGISTICS_OPERATOR",
     },
+    {
+      href: "/shipments/tracking",
+      label: "ETA Tracking",
+      show: role === "ADMIN" || role === "LOGISTICS_OPERATOR",
+    },
     { href: "/admin/users", label: "Users", show: role === "ADMIN" },
   ]
 
