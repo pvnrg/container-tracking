@@ -10,6 +10,7 @@ import {
   MAX_DOCUMENT_SIZE_BYTES,
   STAGE_DOCUMENT_TYPES,
 } from "@/lib/document-labels"
+import { createNotification } from "@/lib/notifications"
 import { prisma } from "@/lib/prisma"
 import { deleteFile, saveFile } from "@/lib/storage"
 
@@ -83,8 +84,23 @@ export async function verifyDocument(documentId: string) {
   const doc = await prisma.document.update({
     where: { id: documentId },
     data: { isVerified: true, verifiedAt: new Date() },
-    select: { shipmentId: true },
+    select: {
+      shipmentId: true,
+      stage: true,
+      shipment: {
+        select: { blNumber: true, transporterId: true },
+      },
+    },
   })
+
+  if (doc.stage === "PORT_CLEARANCE" && doc.shipment.transporterId) {
+    await createNotification({
+      userId: doc.shipment.transporterId,
+      shipmentId: doc.shipmentId,
+      title: "Ready to Load",
+      message: `Shipment ${doc.shipment.blNumber} has cleared customs and is ready for loading/pickup.`,
+    })
+  }
 
   revalidatePath(`/shipments/${doc.shipmentId}`)
 }

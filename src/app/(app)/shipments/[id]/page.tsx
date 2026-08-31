@@ -19,6 +19,7 @@ import {
 } from "@/lib/shipment-labels"
 
 import { DocumentsPanel } from "./documents-panel"
+import { TransporterAssign } from "./transporter-assign"
 
 export default async function ShipmentDetailPage({
   params,
@@ -47,7 +48,15 @@ export default async function ShipmentDetailPage({
     notFound()
   }
 
-  const details: [string, string][] = [
+  const transporters = canManageDocuments
+    ? await prisma.user.findMany({
+        where: { role: "TRANSPORTER", isActive: true },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })
+    : []
+
+  const details: [string, React.ReactNode][] = [
     ["Shipping Line", shipment.shippingLine],
     ["Vessel / Voyage", [shipment.vesselName, shipment.voyageNumber].filter(Boolean).join(" / ") || "—"],
     ["Booking Reference", shipment.bookingRef ?? "—"],
@@ -64,7 +73,18 @@ export default async function ShipmentDetailPage({
     ["Notify Party", shipment.notifyParty ?? "—"],
     ["Current ETA", shipment.currentEta.toLocaleDateString()],
     ["Created By", shipment.createdBy.name],
-    ["Transporter", shipment.transporter?.name ?? "Not yet assigned"],
+    [
+      "Transporter",
+      canManageDocuments ? (
+        <TransporterAssign
+          shipmentId={shipment.id}
+          currentTransporterId={shipment.transporterId}
+          transporters={transporters}
+        />
+      ) : (
+        (shipment.transporter?.name ?? "Not yet assigned")
+      ),
+    ],
   ]
 
   return (

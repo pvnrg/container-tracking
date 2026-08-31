@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { UserRole } from "@prisma/client"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ROLE_LABELS } from "@/lib/auth-utils"
@@ -12,9 +13,11 @@ import { ROLE_LABELS } from "@/lib/auth-utils"
 export function AppNav({
   role,
   name,
+  unreadNotifications,
 }: {
   role: UserRole
   name: string
+  unreadNotifications: number
 }) {
   const pathname = usePathname()
 
@@ -42,6 +45,7 @@ export function AppNav({
       show: role === "ADMIN" || role === "LOGISTICS_OPERATOR",
     },
     { href: "/admin/users", label: "Users", show: role === "ADMIN" },
+    { href: "/notifications", label: "Notifications", show: true },
   ]
 
   return (
@@ -56,11 +60,16 @@ export function AppNav({
                 key={l.href}
                 href={l.href}
                 className={cn(
-                  "text-muted-foreground transition-colors hover:text-foreground",
+                  "flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground",
                   pathname === l.href && "font-medium text-foreground"
                 )}
               >
                 {l.label}
+                {l.href === "/notifications" && unreadNotifications > 0 && (
+                  <Badge variant="default" className="h-4 min-w-4 px-1 text-[10px]">
+                    {unreadNotifications}
+                  </Badge>
+                )}
               </Link>
             ))}
         </nav>

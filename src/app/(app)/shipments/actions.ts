@@ -85,3 +85,30 @@ export async function createShipment(values: ShipmentFormValues) {
     throw err
   }
 }
+
+export async function assignTransporter(input: {
+  shipmentId: string
+  transporterId: string
+}) {
+  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const parsed = z
+    .object({
+      shipmentId: z.string().min(1),
+      transporterId: z.string().min(1),
+    })
+    .parse(input)
+
+  const transporter = await prisma.user.findUnique({
+    where: { id: parsed.transporterId },
+  })
+  if (!transporter || transporter.role !== "TRANSPORTER") {
+    throw new Error("Selected user is not a transporter")
+  }
+
+  await prisma.shipment.update({
+    where: { id: parsed.shipmentId },
+    data: { transporterId: parsed.transporterId },
+  })
+
+  revalidatePath(`/shipments/${parsed.shipmentId}`)
+}
