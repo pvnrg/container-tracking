@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { EmptyState } from "@/components/empty-state"
+import { formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { markAllNotificationsRead, markNotificationRead } from "./actions"
@@ -104,7 +105,7 @@ function NotificationItem({ notification }: { notification: NotificationRow }) {
           </div>
           <p className="text-sm text-muted-foreground">{notification.message}</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{notification.createdAt.toLocaleString()}</span>
+            <span>{formatDateTime(notification.createdAt)}</span>
             {notification.shipment && (
               <>
                 <span>·</span>

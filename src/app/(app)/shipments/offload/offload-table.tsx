@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatDateTime } from "@/lib/format"
 import {
   CONTAINER_STATUS_BADGE_CLASSES,
   CONTAINER_STATUS_LABELS,
@@ -210,7 +211,7 @@ function OffloadRow({ container }: { container: OffloadContainer }) {
       <TableCell>
         {container.actualOffloadedAt ? (
           <span className="text-sm">
-            {container.actualOffloadedAt.toLocaleString()}
+            {formatDateTime(container.actualOffloadedAt)}
           </span>
         ) : (
           <Button

@@ -22,7 +22,13 @@ export default async function OffloadPage() {
         },
       },
     },
-    include: {
+    select: {
+      id: true,
+      containerNumber: true,
+      inventoryReference: true,
+      status: true,
+      offloadScheduledAt: true,
+      actualOffloadedAt: true,
       shipment: {
         select: { id: true, blNumber: true, destinationWarehouse: true },
       },

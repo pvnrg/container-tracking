@@ -19,9 +19,17 @@ export default async function DetentionPage() {
     where: {
       shipment: { status: { in: ARRIVED_OR_LATER_STATUSES } },
     },
-    include: {
+    select: {
+      id: true,
+      containerNumber: true,
       shipment: { select: { id: true, blNumber: true } },
-      detentionTracker: true,
+      detentionTracker: {
+        select: {
+          clockStartDate: true,
+          deadlineDate: true,
+          returnedToDepotDate: true,
+        },
+      },
     },
   })
 

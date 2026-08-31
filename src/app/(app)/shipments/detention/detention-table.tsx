@@ -22,6 +22,7 @@ import {
   DETENTION_RISK_LABELS,
   getDetentionRisk,
 } from "@/lib/detention"
+import { formatDate } from "@/lib/format"
 
 import { markContainerReturned, startDetentionClock } from "./actions"
 
@@ -122,19 +123,17 @@ function DetentionRow({ container }: { container: DetentionContainer }) {
       </TableCell>
       <TableCell>{container.containerNumber}</TableCell>
       <TableCell>
-        {tracker?.clockStartDate
-          ? tracker.clockStartDate.toLocaleDateString()
-          : "—"}
+        {tracker?.clockStartDate ? formatDate(tracker.clockStartDate) : "—"}
       </TableCell>
       <TableCell>
-        {tracker?.deadlineDate ? tracker.deadlineDate.toLocaleDateString() : "—"}
+        {tracker?.deadlineDate ? formatDate(tracker.deadlineDate) : "—"}
       </TableCell>
       <TableCell>
         {!tracker ? (
           <Badge variant="outline">Not started</Badge>
         ) : tracker.returnedToDepotDate ? (
           <Badge variant="secondary">
-            Returned {tracker.returnedToDepotDate.toLocaleDateString()}
+            Returned {formatDate(tracker.returnedToDepotDate)}
           </Badge>
         ) : (
           (() => {
