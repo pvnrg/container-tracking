@@ -36,6 +36,11 @@ export function AppNav({
       label: "Offload Scheduling",
       show: role === "ADMIN" || role === "LOGISTICS_OPERATOR",
     },
+    {
+      href: "/shipments/detention",
+      label: "Detention Tracking",
+      show: role === "ADMIN" || role === "LOGISTICS_OPERATOR",
+    },
     { href: "/admin/users", label: "Users", show: role === "ADMIN" },
   ]
 

@@ -15,6 +15,8 @@ const updateSchema = z.object({
   currentEta: z.string().min(1, "Current ETA is required"),
 })
 
+const DETENTION_FREE_TIME_DAYS = 30
+
 export async function updateShipmentTracking(input: {
   shipmentId: string
   status: ShipmentStatus
@@ -65,6 +67,42 @@ export async function updateShipmentTracking(input: {
           : undefined,
     },
   })
+
+  if (ARRIVED_OR_LATER_STATUSES.includes(parsed.status)) {
+    const containers = await prisma.container.findMany({
+      where: { shipmentId: parsed.shipmentId },
+      include: { detentionTracker: true },
+    })
+
+    for (const container of containers) {
+      if (container.detentionTracker) continue
+
+      const now = new Date()
+      const deadlineDate = new Date(
+        now.getTime() + DETENTION_FREE_TIME_DAYS * 24 * 60 * 60 * 1000
+      )
+
+      await prisma.$transaction([
+        prisma.detentionTracker.create({
+          data: {
+            containerId: container.id,
+            freeTimeDays: DETENTION_FREE_TIME_DAYS,
+            clockStartDate: now,
+            deadlineDate,
+          },
+        }),
+        prisma.container.update({
+          where: { id: container.id },
+          data: {
+            status:
+              container.status === "ON_VESSEL" ? "DISCHARGED_AT_PORT" : undefined,
+          },
+        }),
+      ])
+    }
+
+    revalidatePath("/shipments/detention")
+  }
 
   revalidatePath("/shipments/tracking")
   revalidatePath("/shipments")
