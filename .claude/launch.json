@@ -5,7 +5,7 @@
       "name": "shipping-t-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000,
+      "port": 8282,
       "autoPort": true
     }
   ]
