@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Plus } from "lucide-react"
 
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +36,12 @@ export default async function ShipmentsPage() {
         {canCreate && (
           <Button
             nativeButton={false}
-            render={<Link href="/shipments/new">New Shipment</Link>}
+            render={
+              <Link href="/shipments/new">
+                <Plus data-icon="inline-start" />
+                New Shipment
+              </Link>
+            }
           />
         )}
       </div>

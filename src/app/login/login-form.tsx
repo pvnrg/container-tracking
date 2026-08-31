@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { signIn } from "next-auth/react"
-import { Ship } from "lucide-react"
+import { LogIn, Ship } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,6 +99,7 @@ export function LoginForm() {
           )}
 
           <Button type="submit" disabled={isSubmitting} className="mt-2 w-full">
+            <LogIn data-icon="inline-start" />
             {isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
         </form>

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { DischargePort, RwandanDestination } from "@prisma/client"
 import { toast } from "sonner"
+import { Check, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -228,6 +229,7 @@ export function ShipmentForm() {
             size="sm"
             onClick={() => append(emptyContainer)}
           >
+            <Plus data-icon="inline-start" />
             Add Container
           </Button>
         </CardHeader>
@@ -251,6 +253,7 @@ export function ShipmentForm() {
                     size="sm"
                     onClick={() => remove(index)}
                   >
+                    <Trash2 data-icon="inline-start" />
                     Remove
                   </Button>
                 )}
@@ -329,6 +332,7 @@ export function ShipmentForm() {
 
       <div className="flex justify-end gap-3">
         <Button type="submit" disabled={isSubmitting}>
+          <Check data-icon="inline-start" />
           {isSubmitting ? "Creating..." : "Create Shipment"}
         </Button>
       </div>

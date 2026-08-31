@@ -8,6 +8,7 @@ import {
   Anchor,
   CalendarClock,
   ChevronDown,
+  LogOut,
   PackagePlus,
   Ship,
   Timer,
@@ -125,6 +126,7 @@ export function AppNav({
           size="sm"
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
+          <LogOut data-icon="inline-start" />
           Sign out
         </Button>
       </div>

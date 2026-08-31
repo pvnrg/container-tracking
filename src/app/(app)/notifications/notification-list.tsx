@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { Check, CheckCheck } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,7 @@ export function NotificationList({
             disabled={isMarkingAll}
             onClick={handleMarkAll}
           >
+            <CheckCheck data-icon="inline-start" />
             {isMarkingAll ? "Marking..." : "Mark all read"}
           </Button>
         </div>
@@ -125,6 +127,7 @@ function NotificationItem({ notification }: { notification: NotificationRow }) {
             disabled={isMarking}
             onClick={handleMarkRead}
           >
+            <Check data-icon="inline-start" />
             {isMarking ? "..." : "Mark read"}
           </Button>
         )}

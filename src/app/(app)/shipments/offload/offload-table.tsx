@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { ContainerStatus, RwandanDestination } from "@prisma/client"
+import { PackageCheck, Save } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -195,6 +196,7 @@ function OffloadRow({ container }: { container: OffloadContainer }) {
             disabled={!isDirty || isSavingSchedule}
             onClick={handleSaveSchedule}
           >
+            <Save data-icon="inline-start" />
             {isSavingSchedule ? "Saving..." : "Save"}
           </Button>
         </div>
@@ -211,6 +213,7 @@ function OffloadRow({ container }: { container: OffloadContainer }) {
             disabled={isConfirming}
             onClick={handleConfirm}
           >
+            <PackageCheck data-icon="inline-start" />
             {isConfirming ? "Confirming..." : "Confirm Offload"}
           </Button>
         )}

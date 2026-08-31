@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { DischargePort, ShipmentStatus } from "@prisma/client"
+import { Save } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -204,6 +205,7 @@ function TrackingRow({ shipment }: { shipment: TrackingShipment }) {
           disabled={!isDirty || isSaving}
           onClick={handleSave}
         >
+          <Save data-icon="inline-start" />
           {isSaving ? "Saving..." : "Save"}
         </Button>
       </TableCell>

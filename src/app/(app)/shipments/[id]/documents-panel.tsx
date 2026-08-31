@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { DocumentStage, DocumentType } from "@prisma/client"
+import { CircleCheck, Download, Trash2, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -181,8 +182,9 @@ function DocumentRowItem({
           href={`/api/documents/${doc.id}/download`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-primary underline-offset-4 hover:underline"
+          className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
         >
+          <Download className="size-3.5" />
           Download
         </a>
         {canManage && !doc.isVerified && (
@@ -193,6 +195,7 @@ function DocumentRowItem({
             disabled={isBusy}
             onClick={handleVerify}
           >
+            <CircleCheck data-icon="inline-start" />
             Verify
           </Button>
         )}
@@ -204,6 +207,7 @@ function DocumentRowItem({
             disabled={isBusy}
             onClick={handleDelete}
           >
+            <Trash2 data-icon="inline-start" />
             Delete
           </Button>
         )}
@@ -263,7 +267,14 @@ function UploadDocumentDialog({ shipmentId }: { shipmentId: string }) {
         if (!next) reset()
       }}
     >
-      <DialogTrigger render={<Button>Upload Document</Button>} />
+      <DialogTrigger
+        render={
+          <Button>
+            <Upload data-icon="inline-start" />
+            Upload Document
+          </Button>
+        }
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
@@ -335,6 +346,7 @@ function UploadDocumentDialog({ shipmentId }: { shipmentId: string }) {
 
         <DialogFooter>
           <Button type="button" disabled={isSubmitting} onClick={handleSubmit}>
+            <Upload data-icon="inline-start" />
             {isSubmitting ? "Uploading..." : "Upload"}
           </Button>
         </DialogFooter>

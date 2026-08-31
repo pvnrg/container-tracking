@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { PackageCheck, Timer } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -153,6 +154,7 @@ function DetentionRow({ container }: { container: DetentionContainer }) {
       <TableCell className="text-right">
         {!tracker && (
           <Button type="button" size="sm" disabled={isBusy} onClick={handleStart}>
+            <Timer data-icon="inline-start" />
             {isBusy ? "Starting..." : "Start Detention Clock"}
           </Button>
         )}
@@ -164,6 +166,7 @@ function DetentionRow({ container }: { container: DetentionContainer }) {
             disabled={isBusy}
             onClick={handleReturn}
           >
+            <PackageCheck data-icon="inline-start" />
             {isBusy ? "Saving..." : "Mark Returned to Depot"}
           </Button>
         )}

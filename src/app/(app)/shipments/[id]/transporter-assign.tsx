@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -77,6 +78,7 @@ export function TransporterAssign({
         disabled={!isDirty || isSaving}
         onClick={handleSave}
       >
+        <Save data-icon="inline-start" />
         {isSaving ? "Saving..." : "Save"}
       </Button>
     </div>
