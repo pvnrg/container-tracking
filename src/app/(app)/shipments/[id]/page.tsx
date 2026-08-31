@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -17,12 +18,17 @@ import {
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
 
+import { DocumentsPanel } from "./documents-panel"
+
 export default async function ShipmentDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const session = await auth()
+  const canManageDocuments =
+    session?.user.role === "ADMIN" || session?.user.role === "LOGISTICS_OPERATOR"
 
   const shipment = await prisma.shipment.findUnique({
     where: { id },
@@ -30,6 +36,10 @@ export default async function ShipmentDetailPage({
       containers: { orderBy: { containerNumber: "asc" } },
       createdBy: { select: { name: true } },
       transporter: { select: { name: true } },
+      documents: {
+        include: { uploadedBy: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
     },
   })
 
@@ -123,6 +133,12 @@ export default async function ShipmentDetailPage({
           </Table>
         </CardContent>
       </Card>
+
+      <DocumentsPanel
+        shipmentId={shipment.id}
+        documents={shipment.documents}
+        canManage={canManageDocuments}
+      />
     </div>
   )
 }
