@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { DocumentStage, DocumentType } from "@prisma/client"
 
+import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
 import {
   ALLOWED_DOCUMENT_MIME_TYPES,
+  DOCUMENT_TYPE_LABELS,
   MAX_DOCUMENT_SIZE_BYTES,
   STAGE_DOCUMENT_TYPES,
 } from "@/lib/document-labels"
@@ -75,11 +77,18 @@ export async function uploadDocument(formData: FormData) {
     },
   })
 
+  await logShipmentAudit({
+    shipmentId: parsed.shipmentId,
+    userId: session.user.id,
+    action: "DOCUMENT_UPLOADED",
+    newValue: { fileName: file.name, type: DOCUMENT_TYPE_LABELS[parsed.type] },
+  })
+
   revalidatePath(`/shipments/${parsed.shipmentId}`)
 }
 
 export async function verifyDocument(documentId: string) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
 
   const doc = await prisma.document.update({
     where: { id: documentId },
@@ -87,10 +96,19 @@ export async function verifyDocument(documentId: string) {
     select: {
       shipmentId: true,
       stage: true,
+      type: true,
+      fileName: true,
       shipment: {
         select: { blNumber: true, transporterId: true },
       },
     },
+  })
+
+  await logShipmentAudit({
+    shipmentId: doc.shipmentId,
+    userId: session.user.id,
+    action: "DOCUMENT_VERIFIED",
+    newValue: { fileName: doc.fileName, type: DOCUMENT_TYPE_LABELS[doc.type] },
   })
 
   if (doc.stage === "PORT_CLEARANCE" && doc.shipment.transporterId) {
@@ -106,7 +124,7 @@ export async function verifyDocument(documentId: string) {
 }
 
 export async function deleteDocument(documentId: string) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
 
   const doc = await prisma.document.findUnique({ where: { id: documentId } })
   if (!doc) {
@@ -115,6 +133,13 @@ export async function deleteDocument(documentId: string) {
 
   await deleteFile(doc.fileUrl)
   await prisma.document.delete({ where: { id: documentId } })
+
+  await logShipmentAudit({
+    shipmentId: doc.shipmentId,
+    userId: session.user.id,
+    action: "DOCUMENT_DELETED",
+    oldValue: { fileName: doc.fileName, type: DOCUMENT_TYPE_LABELS[doc.type] },
+  })
 
   revalidatePath(`/shipments/${doc.shipmentId}`)
 }

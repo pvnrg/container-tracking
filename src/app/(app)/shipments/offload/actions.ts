@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { formatDateTime } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import { SHIPMENT_STATUS_ORDER } from "@/lib/shipment-labels"
 
@@ -24,13 +26,23 @@ export async function scheduleContainerOffload(input: {
   containerId: string
   offloadScheduledAt: string
 }) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = scheduleSchema.parse(input)
 
   const container = await prisma.container.update({
     where: { id: parsed.containerId },
     data: { offloadScheduledAt: new Date(parsed.offloadScheduledAt) },
-    select: { shipmentId: true },
+    select: { shipmentId: true, containerNumber: true },
+  })
+
+  await logShipmentAudit({
+    shipmentId: container.shipmentId,
+    userId: session.user.id,
+    action: "OFFLOAD_SCHEDULED",
+    newValue: {
+      containerNumber: container.containerNumber,
+      offloadScheduledAt: formatDateTime(new Date(parsed.offloadScheduledAt)),
+    },
   })
 
   revalidateOffloadPaths(container.shipmentId)
@@ -63,9 +75,8 @@ export async function confirmContainerOffload(containerId: string) {
         userId: session.user.id,
         action: "CONTAINER_OFFLOAD_CONFIRMED",
         newValue: {
-          containerId: container.id,
           containerNumber: container.containerNumber,
-          actualOffloadedAt: now.toISOString(),
+          actualOffloadedAt: formatDateTime(now),
         },
       },
     }),

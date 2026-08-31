@@ -4,10 +4,15 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { ShipmentStatus } from "@prisma/client"
 
+import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
 import { STAGE_DOCUMENT_TYPES } from "@/lib/document-labels"
+import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
-import { ARRIVED_OR_LATER_STATUSES } from "@/lib/shipment-labels"
+import {
+  ARRIVED_OR_LATER_STATUSES,
+  SHIPMENT_STATUS_LABELS,
+} from "@/lib/shipment-labels"
 
 const updateSchema = z.object({
   shipmentId: z.string().min(1),
@@ -22,12 +27,17 @@ export async function updateShipmentTracking(input: {
   status: ShipmentStatus
   currentEta: string
 }) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = updateSchema.parse(input)
 
   const shipment = await prisma.shipment.findUnique({
     where: { id: parsed.shipmentId },
-    select: { shippedOnBoardDate: true, actualDischargeDate: true },
+    select: {
+      status: true,
+      currentEta: true,
+      shippedOnBoardDate: true,
+      actualDischargeDate: true,
+    },
   })
   if (!shipment) {
     throw new Error("Shipment not found")
@@ -67,6 +77,25 @@ export async function updateShipmentTracking(input: {
           : undefined,
     },
   })
+
+  if (
+    shipment.status !== parsed.status ||
+    shipment.currentEta.getTime() !== new Date(parsed.currentEta).getTime()
+  ) {
+    await logShipmentAudit({
+      shipmentId: parsed.shipmentId,
+      userId: session.user.id,
+      action: "STATUS_UPDATED",
+      oldValue: {
+        status: SHIPMENT_STATUS_LABELS[shipment.status],
+        currentEta: formatDate(shipment.currentEta),
+      },
+      newValue: {
+        status: SHIPMENT_STATUS_LABELS[parsed.status],
+        currentEta: formatDate(new Date(parsed.currentEta)),
+      },
+    })
+  }
 
   if (ARRIVED_OR_LATER_STATUSES.includes(parsed.status)) {
     const containers = await prisma.container.findMany({

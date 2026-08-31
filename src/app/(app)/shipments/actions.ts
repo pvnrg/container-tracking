@@ -4,6 +4,7 @@ import { z } from "zod"
 import { revalidatePath } from "next/cache"
 import { DischargePort, Prisma, RwandanDestination } from "@prisma/client"
 
+import { logShipmentAudit } from "@/lib/audit"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-utils"
 
@@ -73,6 +74,16 @@ export async function createShipment(values: ShipmentFormValues) {
       },
     })
 
+    await logShipmentAudit({
+      shipmentId: shipment.id,
+      userId: session.user.id,
+      action: "SHIPMENT_CREATED",
+      newValue: {
+        blNumber: shipment.blNumber,
+        containerCount: parsed.containers.length,
+      },
+    })
+
     revalidatePath("/shipments")
     return { id: shipment.id }
   } catch (err) {
@@ -90,7 +101,7 @@ export async function assignTransporter(input: {
   shipmentId: string
   transporterId: string
 }) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = z
     .object({
       shipmentId: z.string().min(1),
@@ -105,9 +116,22 @@ export async function assignTransporter(input: {
     throw new Error("Selected user is not a transporter")
   }
 
+  const previous = await prisma.shipment.findUnique({
+    where: { id: parsed.shipmentId },
+    select: { transporter: { select: { name: true } } },
+  })
+
   await prisma.shipment.update({
     where: { id: parsed.shipmentId },
     data: { transporterId: parsed.transporterId },
+  })
+
+  await logShipmentAudit({
+    shipmentId: parsed.shipmentId,
+    userId: session.user.id,
+    action: "TRANSPORTER_ASSIGNED",
+    oldValue: { transporterName: previous?.transporter?.name ?? null },
+    newValue: { transporterName: transporter.name },
   })
 
   revalidatePath(`/shipments/${parsed.shipmentId}`)

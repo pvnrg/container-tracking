@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { auth } from "@/auth"
+import { AUDIT_ACTION_LABELS, describeAuditEntry } from "@/lib/audit"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -11,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatDateTime } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import {
   CONTAINER_STATUS_BADGE_CLASSES,
@@ -42,6 +44,10 @@ export default async function ShipmentDetailPage({
       transporter: { select: { name: true } },
       documents: {
         include: { uploadedBy: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      auditLogs: {
+        include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
       },
     },
@@ -170,6 +176,39 @@ export default async function ShipmentDetailPage({
         documents={shipment.documents}
         canManage={canManageDocuments}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Activity Log</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {shipment.auditLogs.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No activity recorded yet.
+            </p>
+          )}
+          {shipment.auditLogs.map((entry) => (
+            <div
+              key={entry.id}
+              className="flex flex-col gap-0.5 border-b pb-3 text-sm last:border-b-0 last:pb-0"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium">
+                  {AUDIT_ACTION_LABELS[entry.action as keyof typeof AUDIT_ACTION_LABELS] ??
+                    entry.action}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDateTime(entry.createdAt)}
+                </span>
+              </div>
+              <p className="text-muted-foreground">
+                {describeAuditEntry(entry)}
+                {entry.user && ` — ${entry.user.name}`}
+              </p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { requireRole } from "@/lib/auth-utils"
+import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 
 const FREE_TIME_DAYS = 30
@@ -15,7 +16,7 @@ function revalidateDetentionPaths(shipmentId: string) {
 }
 
 export async function startDetentionClock(containerId: string) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
 
   const container = await prisma.container.findUnique({
     where: { id: containerId },
@@ -48,13 +49,24 @@ export async function startDetentionClock(containerId: string) {
         status: container.status === "ON_VESSEL" ? "DISCHARGED_AT_PORT" : undefined,
       },
     }),
+    prisma.shipmentAudit.create({
+      data: {
+        shipmentId: container.shipmentId,
+        userId: session.user.id,
+        action: "DETENTION_CLOCK_STARTED",
+        newValue: {
+          containerNumber: container.containerNumber,
+          deadlineDate: formatDate(deadlineDate),
+        },
+      },
+    }),
   ])
 
   revalidateDetentionPaths(container.shipmentId)
 }
 
 export async function markContainerReturned(containerId: string) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
 
   const container = await prisma.container.findUnique({
     where: { id: containerId },
@@ -67,14 +79,27 @@ export async function markContainerReturned(containerId: string) {
     throw new Error("Detention clock has not been started for this container")
   }
 
+  const returnedAt = new Date()
+
   await prisma.$transaction([
     prisma.detentionTracker.update({
       where: { containerId },
-      data: { returnedToDepotDate: new Date(), isOverdue: false },
+      data: { returnedToDepotDate: returnedAt, isOverdue: false },
     }),
     prisma.container.update({
       where: { id: containerId },
       data: { status: "EMPTY_RETURNED_TO_DEPOT" },
+    }),
+    prisma.shipmentAudit.create({
+      data: {
+        shipmentId: container.shipmentId,
+        userId: session.user.id,
+        action: "CONTAINER_RETURNED_TO_DEPOT",
+        newValue: {
+          containerNumber: container.containerNumber,
+          returnedToDepotDate: formatDate(returnedAt),
+        },
+      },
     }),
   ])
 
