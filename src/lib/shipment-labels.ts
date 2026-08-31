@@ -1,4 +1,5 @@
 import {
+  ContainerStatus,
   DischargePort,
   RwandanDestination,
   ShipmentStatus,
@@ -36,3 +37,26 @@ export const ARRIVED_OR_LATER_STATUSES: ShipmentStatus[] = [
   "OFFLOADED",
   "COMPLETED",
 ]
+
+// Declaration order matches the SRD's chronological milestone sequence,
+// so this doubles as a forward-only progress comparator.
+export const SHIPMENT_STATUS_ORDER: ShipmentStatus[] = [
+  "SHIPPED_ON_BOARD",
+  "IN_TRANSIT_SEA",
+  "ARRIVED_PORT_OF_DISCHARGE",
+  "CUSTOMS_PROCESSING",
+  "CUSTOMS_CLEARED",
+  "LOADED_ROAD_TRANSIT",
+  "ARRIVED_DESTINATION",
+  "OFFLOADED",
+  "COMPLETED",
+]
+
+export const CONTAINER_STATUS_LABELS: Record<ContainerStatus, string> = {
+  ON_VESSEL: "On Vessel",
+  DISCHARGED_AT_PORT: "Discharged at Port",
+  IN_TRANSIT_TRUCK: "In-Transit (Road)",
+  DELIVERED_WAREHOUSE: "Delivered to Warehouse",
+  OFFLOADED: "Offloaded",
+  EMPTY_RETURNED_TO_DEPOT: "Empty Returned to Depot",
+}
