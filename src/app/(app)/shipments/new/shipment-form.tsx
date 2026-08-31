@@ -247,7 +247,7 @@ export function ShipmentForm() {
                 {fields.length > 1 && (
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="destructive"
                     size="sm"
                     onClick={() => remove(index)}
                   >

@@ -200,7 +200,7 @@ function DocumentRowItem({
           <Button
             type="button"
             size="sm"
-            variant="ghost"
+            variant="destructive"
             disabled={isBusy}
             onClick={handleDelete}
           >
