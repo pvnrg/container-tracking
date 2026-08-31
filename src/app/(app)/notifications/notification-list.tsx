@@ -4,11 +4,12 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Check, CheckCheck } from "lucide-react"
+import { BellOff, Check, CheckCheck } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { EmptyState } from "@/components/empty-state"
 import { cn } from "@/lib/utils"
 
 import { markAllNotificationsRead, markNotificationRead } from "./actions"
@@ -63,7 +64,11 @@ export function NotificationList({
       )}
 
       {notifications.length === 0 && (
-        <p className="text-sm text-muted-foreground">No notifications yet.</p>
+        <EmptyState
+          icon={BellOff}
+          title="No notifications yet"
+          description="You'll see updates about your shipments and containers here."
+        />
       )}
 
       {notifications.map((n) => (

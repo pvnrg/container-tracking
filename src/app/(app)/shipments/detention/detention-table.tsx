@@ -8,6 +8,7 @@ import { PackageCheck, Timer } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import {
   Table,
   TableBody,
@@ -56,11 +57,12 @@ export function DetentionTable({
         <TableBody>
           {containers.length === 0 && (
             <TableRow>
-              <TableCell
-                colSpan={6}
-                className="text-center text-muted-foreground"
-              >
-                No containers to show.
+              <TableCell colSpan={6} className="p-0">
+                <EmptyState
+                  icon={Timer}
+                  title="No containers to show"
+                  description="Containers appear here once their shipment has arrived at the discharge port."
+                />
               </TableCell>
             </TableRow>
           )}

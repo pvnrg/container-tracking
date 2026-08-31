@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { Plus } from "lucide-react"
+import { Plus, Ship } from "lucide-react"
 
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import {
   Table,
   TableBody,
@@ -61,11 +62,16 @@ export default async function ShipmentsPage() {
           <TableBody>
             {shipments.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center text-muted-foreground"
-                >
-                  No shipments yet.
+                <TableCell colSpan={6} className="p-0">
+                  <EmptyState
+                    icon={Ship}
+                    title="No shipments yet"
+                    description={
+                      canCreate
+                        ? "Create your first shipment to start tracking it."
+                        : "Shipments will appear here once one is created."
+                    }
+                  />
                 </TableCell>
               </TableRow>
             )}

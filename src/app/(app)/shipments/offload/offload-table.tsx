@@ -5,10 +5,11 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { ContainerStatus, RwandanDestination } from "@prisma/client"
-import { PackageCheck, Save } from "lucide-react"
+import { ListFilter, PackageCheck, Save } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -94,11 +95,16 @@ export function OffloadTable({
           <TableBody>
             {visible.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center text-muted-foreground"
-                >
-                  No containers to show.
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState
+                    icon={ListFilter}
+                    title="No containers to show"
+                    description={
+                      hideCompleted
+                        ? 'Try unchecking "Hide completed containers".'
+                        : "Containers appear here once their shipment has left port."
+                    }
+                  />
                 </TableCell>
               </TableRow>
             )}

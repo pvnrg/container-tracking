@@ -4,10 +4,11 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { DischargePort, ShipmentStatus } from "@prisma/client"
-import { Save } from "lucide-react"
+import { ListFilter, Save } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -108,11 +109,16 @@ export function TrackingTable({
           <TableBody>
             {visible.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center text-muted-foreground"
-                >
-                  No shipments to show.
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState
+                    icon={ListFilter}
+                    title="No shipments to show"
+                    description={
+                      hideCompleted
+                        ? 'Try unchecking "Hide completed shipments".'
+                        : "There are no shipments to track yet."
+                    }
+                  />
                 </TableCell>
               </TableRow>
             )}
