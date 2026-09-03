@@ -33,9 +33,6 @@ import {
 } from "@/lib/shipment-labels"
 
 import { createShipment } from "../actions"
-import { uploadDocument } from "../[id]/documents-actions"
-import type { ExtractedShipmentData } from "./extract-actions"
-import { OblUploadCard } from "./obl-upload-card"
 
 const containerSchema = z.object({
   containerNumber: z.string().min(1, "Required"),
@@ -85,14 +82,10 @@ export function ShipmentForm() {
   const router = useRouter()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const [oblFile, setOblFile] = useState<File | null>(null)
-
   const {
     register,
     control,
     handleSubmit,
-    getValues,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(shipmentSchema),
@@ -109,44 +102,6 @@ export function ShipmentForm() {
     name: "containers",
   })
 
-  const handleExtracted = (file: File, data: ExtractedShipmentData) => {
-    setOblFile(file)
-
-    // reset() re-registers every field (including the container array) in
-    // one atomic pass. The container fields are bound via Controller rather
-    // than register() specifically so this stays reliable when the array's
-    // length changes -- an uncontrolled input doesn't always pick up a new
-    // value when a row is added or removed in the same update.
-    const current = getValues()
-    reset({
-      ...current,
-      blNumber: data.blNumber || current.blNumber,
-      blType: data.blType || current.blType,
-      shippingLine: data.shippingLine || current.shippingLine,
-      vesselName: data.vesselName || current.vesselName,
-      voyageNumber: data.voyageNumber || current.voyageNumber,
-      bookingRef: data.bookingRef || current.bookingRef,
-      originCountry: data.originCountry || current.originCountry,
-      originPort: data.originPort || current.originPort,
-      dischargePort: data.dischargePort || current.dischargePort,
-      shipperName: data.shipperName || current.shipperName,
-      consigneeName: data.consigneeName || current.consigneeName,
-      notifyParty: data.notifyParty || current.notifyParty,
-      containers:
-        data.containers.length > 0
-          ? data.containers.map((c) => ({
-              containerNumber: c.containerNumber ?? "",
-              containerType: c.containerType || emptyContainer.containerType,
-              sealNumber: c.sealNumber ?? "",
-              tareWeightKg: c.tareWeightKg ?? "",
-              grossWeightKg: c.grossWeightKg ?? "",
-              inventoryReference: c.inventoryReference ?? "",
-              itemQuantity: c.itemQuantity ?? "",
-            }))
-          : current.containers,
-    })
-  }
-
   const onSubmit = async (values: FormValues) => {
     setSubmitError(null)
     try {
@@ -160,21 +115,6 @@ export function ShipmentForm() {
         })),
       })
 
-      if (oblFile) {
-        try {
-          const docFormData = new FormData()
-          docFormData.set("shipmentId", result.id)
-          docFormData.set("stage", "ENTRY_LEVEL")
-          docFormData.set("type", "BILL_OF_LADING")
-          docFormData.set("file", oblFile)
-          await uploadDocument(docFormData)
-        } catch {
-          toast.warning(
-            "Shipment created, but the OBL file couldn't be attached automatically. Upload it from the shipment page."
-          )
-        }
-      }
-
       toast.success("Shipment created")
       router.push(`/shipments/${result.id}`)
     } catch (err) {
@@ -187,8 +127,6 @@ export function ShipmentForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-      <OblUploadCard onExtracted={handleExtracted} />
-
       <Card>
         <CardHeader>
           <CardTitle>Bill of Lading Details</CardTitle>
