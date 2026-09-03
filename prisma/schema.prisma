@@ -22,6 +22,11 @@ enum DischargePort {
   MOMBASA
 }
 
+enum BlType {
+  SEA_WAYBILL
+  ORIGINAL
+}
+
 enum RwandanDestination {
   NYANZA_KICUKIRO
   RWAMAGANA_INDUSTRIAL_ZONE
@@ -106,6 +111,7 @@ model User {
 model Shipment {
   id                   String              @id @default(uuid())
   blNumber             String              @unique
+  blType               BlType              @default(ORIGINAL)
   shippingLine         String // e.g. MSC
   vesselName           String? // e.g. MSC ASYA
   voyageNumber         String? // e.g. MA622R
@@ -122,6 +128,18 @@ model Shipment {
   shippedOnBoardDate  DateTime?
   currentEta          DateTime // Maintained and updated daily
   actualDischargeDate DateTime?
+
+  // Road transit to the Rwandan destination warehouse (LOADED_ROAD_TRANSIT)
+  transitStartedAt  DateTime?
+  transitArrivalEta DateTime?
+
+  // Import tax / duty payment (recorded independently of status)
+  isTaxPaid     Boolean   @default(false)
+  taxPaidAt     DateTime?
+  taxLocation   String? // e.g. "Mombasa Port Customs"
+  taxReceivedBy String? // name of the receiving officer/agent
+  taxAmount     Decimal?  @db.Decimal(12, 2)
+  taxCurrency   String?   @default("USD")
 
   status ShipmentStatus @default(SHIPPED_ON_BOARD)
 
@@ -219,8 +237,12 @@ model Document {
   shipmentId String
   shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
-  stage    DocumentStage
-  type     DocumentType
+  // Structured checklist documents set both stage and type; ad-hoc general
+  // documents (uploaded from the "General Documents" section) leave both
+  // null and set a free-text title instead.
+  stage    DocumentStage?
+  type     DocumentType?
+  title    String?
   fileUrl  String
   fileName String
   fileSize Int
@@ -261,6 +283,16 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+}
+
+// Extra numbers (not tied to a User account) that receive a copy of every
+// WhatsApp notification the system sends, e.g. an ops manager's phone.
+model WhatsAppRecipient {
+  id          String   @id @default(uuid())
+  label       String
+  phoneNumber String   @unique // E.164 format
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }
 
 model ShipmentAudit {

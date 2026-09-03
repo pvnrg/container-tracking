@@ -108,7 +108,10 @@ export async function verifyDocument(documentId: string) {
     shipmentId: doc.shipmentId,
     userId: session.user.id,
     action: "DOCUMENT_VERIFIED",
-    newValue: { fileName: doc.fileName, type: DOCUMENT_TYPE_LABELS[doc.type] },
+    newValue: {
+      fileName: doc.fileName,
+      type: doc.type ? DOCUMENT_TYPE_LABELS[doc.type] : undefined,
+    },
   })
 
   if (doc.stage === "PORT_CLEARANCE" && doc.shipment.transporterId) {
@@ -138,8 +141,78 @@ export async function deleteDocument(documentId: string) {
     shipmentId: doc.shipmentId,
     userId: session.user.id,
     action: "DOCUMENT_DELETED",
-    oldValue: { fileName: doc.fileName, type: DOCUMENT_TYPE_LABELS[doc.type] },
+    oldValue: {
+      fileName: doc.fileName,
+      type: doc.type ? DOCUMENT_TYPE_LABELS[doc.type] : (doc.title ?? undefined),
+    },
   })
 
   revalidatePath(`/shipments/${doc.shipmentId}`)
+}
+
+export async function uploadGeneralDocuments(formData: FormData) {
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+
+  const shipmentId = formData.get("shipmentId")
+  if (typeof shipmentId !== "string" || !shipmentId) {
+    throw new Error("Missing shipment")
+  }
+
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    select: { id: true },
+  })
+  if (!shipment) {
+    throw new Error("Shipment not found")
+  }
+
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File)
+  const titles = formData.getAll("titles").map((t) => String(t))
+
+  if (files.length === 0) {
+    throw new Error("Select at least one file to upload")
+  }
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    if (file.size === 0) continue
+
+    if (!ALLOWED_DOCUMENT_MIME_TYPES.includes(file.type)) {
+      throw new Error(
+        `"${file.name}" is an unsupported file type. Allowed: PDF, JPEG, PNG, WEBP, Word, Excel.`
+      )
+    }
+    if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+      throw new Error(`"${file.name}" is too large. Maximum size is 15MB.`)
+    }
+
+    const title = titles[i]?.trim() || file.name
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const { key } = await saveFile({
+      shipmentId,
+      originalName: file.name,
+      buffer,
+    })
+
+    await prisma.document.create({
+      data: {
+        shipmentId,
+        title,
+        fileUrl: key,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        uploadedById: session.user.id,
+      },
+    })
+
+    await logShipmentAudit({
+      shipmentId,
+      userId: session.user.id,
+      action: "DOCUMENT_UPLOADED",
+      newValue: { fileName: file.name, title },
+    })
+  }
+
+  revalidatePath(`/shipments/${shipmentId}`)
 }

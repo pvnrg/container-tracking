@@ -1,4 +1,5 @@
 import {
+  BlType,
   ContainerStatus,
   DischargePort,
   RwandanDestination,
@@ -8,6 +9,11 @@ import {
 export const DISCHARGE_PORT_LABELS: Record<DischargePort, string> = {
   DAR_ES_SALAAM: "Dar es Salaam, Tanzania",
   MOMBASA: "Mombasa, Kenya",
+}
+
+export const BL_TYPE_LABELS: Record<BlType, string> = {
+  SEA_WAYBILL: "Sea Waybill",
+  ORIGINAL: "Original",
 }
 
 export const DESTINATION_WAREHOUSE_LABELS: Record<RwandanDestination, string> = {

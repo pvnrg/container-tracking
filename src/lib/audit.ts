@@ -13,6 +13,7 @@ export type AuditAction =
   | "DOCUMENT_UPLOADED"
   | "DOCUMENT_VERIFIED"
   | "DOCUMENT_DELETED"
+  | "TAX_PAYMENT_RECORDED"
 
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   SHIPMENT_CREATED: "Shipment Created",
@@ -25,6 +26,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   DOCUMENT_UPLOADED: "Document Uploaded",
   DOCUMENT_VERIFIED: "Document Verified",
   DOCUMENT_DELETED: "Document Deleted",
+  TAX_PAYMENT_RECORDED: "Tax Payment Recorded",
 }
 
 /**
@@ -87,11 +89,13 @@ export function describeAuditEntry(entry: {
     case "CONTAINER_RETURNED_TO_DEPOT":
       return `Container ${newV.containerNumber ?? ""} returned to depot on ${newV.returnedToDepotDate ?? ""}.`
     case "DOCUMENT_UPLOADED":
-      return `Uploaded "${newV.fileName ?? ""}" (${newV.type ?? ""}).`
+      return `Uploaded "${newV.fileName ?? ""}" (${newV.type ?? newV.title ?? "General"}).`
     case "DOCUMENT_VERIFIED":
       return `Verified "${newV.fileName ?? ""}".`
     case "DOCUMENT_DELETED":
       return `Deleted "${oldV.fileName ?? ""}".`
+    case "TAX_PAYMENT_RECORDED":
+      return `Tax of ${newV.currency ?? ""} ${newV.amount ?? ""} recorded as paid to ${newV.receivedBy ?? "—"} at ${newV.location ?? "—"} on ${newV.paidAt ?? "—"}.`
     default:
       return entry.action
   }

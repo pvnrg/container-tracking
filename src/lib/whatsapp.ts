@@ -6,7 +6,7 @@ export type WhatsAppSendResult = {
   error?: string
 }
 
-function normalizePhone(phone: string) {
+export function normalizePhone(phone: string) {
   return phone.replace(/^\+/, "").replace(/[^\d]/g, "")
 }
 

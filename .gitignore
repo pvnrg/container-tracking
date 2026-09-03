@@ -40,6 +40,9 @@ yarn-error.log*
 # uploaded documents (local disk storage)
 /uploads
 
+# cached OCR language data (tesseract.js)
+/.cache
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

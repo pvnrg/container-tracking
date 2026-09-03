@@ -2,7 +2,7 @@
 
 import { z } from "zod"
 import { revalidatePath } from "next/cache"
-import { DischargePort, Prisma, RwandanDestination } from "@prisma/client"
+import { BlType, DischargePort, Prisma, RwandanDestination } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { prisma } from "@/lib/prisma"
@@ -12,25 +12,26 @@ const containerSchema = z.object({
   containerNumber: z.string().min(1, "Container number is required"),
   containerType: z.string().min(1, "Container type is required"),
   sealNumber: z.string().optional(),
-  tareWeightKg: z.number().optional(),
-  grossWeightKg: z.number().optional(),
+  tareWeightKg: z.number({ message: "Tare weight is required" }),
+  grossWeightKg: z.number({ message: "Gross weight is required" }),
   inventoryReference: z.string().min(1, "Inventory reference is required"),
-  itemQuantity: z.number().int().optional(),
+  itemQuantity: z.number().int({ message: "Item quantity is required" }),
 })
 
 const shipmentSchema = z.object({
   blNumber: z.string().min(1, "BL number is required"),
+  blType: z.nativeEnum(BlType),
   shippingLine: z.string().min(1, "Shipping line is required"),
-  vesselName: z.string().optional(),
+  vesselName: z.string().min(1, "Vessel name is required"),
   voyageNumber: z.string().optional(),
   bookingRef: z.string().optional(),
   originCountry: z.string().min(1, "Origin country is required"),
-  originPort: z.string().optional(),
+  originPort: z.string().min(1, "Origin port is required"),
   dischargePort: z.nativeEnum(DischargePort),
-  destinationWarehouse: z.nativeEnum(RwandanDestination).optional(),
-  shipperName: z.string().optional(),
-  consigneeName: z.string().optional(),
-  notifyParty: z.string().optional(),
+  destinationWarehouse: z.nativeEnum(RwandanDestination),
+  shipperName: z.string().min(1, "Shipper is required"),
+  consigneeName: z.string().min(1, "Consignee is required"),
+  notifyParty: z.string().min(1, "Notify party is required"),
   currentEta: z.string().min(1, "Current ETA is required"),
   containers: z
     .array(containerSchema)
@@ -47,6 +48,7 @@ export async function createShipment(values: ShipmentFormValues) {
     const shipment = await prisma.shipment.create({
       data: {
         blNumber: parsed.blNumber,
+        blType: parsed.blType,
         shippingLine: parsed.shippingLine,
         vesselName: parsed.vesselName || null,
         voyageNumber: parsed.voyageNumber || null,

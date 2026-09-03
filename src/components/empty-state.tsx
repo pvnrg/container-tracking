@@ -1,14 +1,17 @@
 import type { LucideIcon } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
 export function EmptyState({
   icon: Icon,
+  illustration,
   title,
   description,
   className,
 }: {
-  icon: LucideIcon
+  icon?: LucideIcon
+  illustration?: ReactNode
   title: string
   description?: string
   className?: string
@@ -20,9 +23,11 @@ export function EmptyState({
         className
       )}
     >
-      <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
-        <Icon className="size-5" />
-      </div>
+      {illustration ?? (
+        <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          {Icon && <Icon className="size-5" />}
+        </div>
+      )}
       <p className="text-sm font-medium">{title}</p>
       {description && (
         <p className="max-w-sm text-sm text-muted-foreground">{description}</p>

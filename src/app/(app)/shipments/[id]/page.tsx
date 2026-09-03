@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import type { DocumentStage, DocumentType } from "@prisma/client"
 
 import { auth } from "@/auth"
 import { AUDIT_ACTION_LABELS, describeAuditEntry } from "@/lib/audit"
@@ -15,6 +16,7 @@ import {
 import { formatDateTime } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import {
+  BL_TYPE_LABELS,
   CONTAINER_STATUS_BADGE_CLASSES,
   CONTAINER_STATUS_LABELS,
   DESTINATION_WAREHOUSE_LABELS,
@@ -24,7 +26,10 @@ import {
 } from "@/lib/shipment-labels"
 
 import { DocumentsPanel } from "./documents-panel"
+import { GeneralDocumentsPanel } from "./general-documents-panel"
+import { TaxPaymentCard } from "./tax-payment-card"
 import { TransporterAssign } from "./transporter-assign"
+import { ShipmentEditDialog } from "../shipment-edit-dialog"
 
 export default async function ShipmentDetailPage({
   params,
@@ -65,7 +70,14 @@ export default async function ShipmentDetailPage({
       })
     : []
 
+  const structuredDocuments = shipment.documents.filter(
+    (d): d is typeof d & { stage: DocumentStage; type: DocumentType } =>
+      d.stage !== null && d.type !== null
+  )
+  const generalDocuments = shipment.documents.filter((d) => d.stage === null)
+
   const details: [string, React.ReactNode][] = [
+    ["BL Type", BL_TYPE_LABELS[shipment.blType]],
     ["Shipping Line", shipment.shippingLine],
     ["Vessel / Voyage", [shipment.vesselName, shipment.voyageNumber].filter(Boolean).join(" / ") || "—"],
     ["Booking Reference", shipment.bookingRef ?? "—"],
@@ -81,6 +93,22 @@ export default async function ShipmentDetailPage({
     ["Consignee", shipment.consigneeName ?? "—"],
     ["Notify Party", shipment.notifyParty ?? "—"],
     ["Current ETA", shipment.currentEta.toLocaleDateString()],
+    [
+      "Arrived at Port",
+      shipment.actualDischargeDate
+        ? formatDateTime(shipment.actualDischargeDate)
+        : "—",
+    ],
+    [
+      "Transit Started",
+      shipment.transitStartedAt ? formatDateTime(shipment.transitStartedAt) : "—",
+    ],
+    [
+      "Transit Expected Arrival",
+      shipment.transitArrivalEta
+        ? formatDateTime(shipment.transitArrivalEta)
+        : "—",
+    ],
     ["Created By", shipment.createdBy.name],
     [
       "Transporter",
@@ -106,12 +134,28 @@ export default async function ShipmentDetailPage({
             {shipment.containers.length === 1 ? "" : "s"}
           </p>
         </div>
-        <Badge
-          variant="outline"
-          className={SHIPMENT_STATUS_BADGE_CLASSES[shipment.status]}
-        >
-          {SHIPMENT_STATUS_LABELS[shipment.status]}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className={SHIPMENT_STATUS_BADGE_CLASSES[shipment.status]}
+          >
+            {SHIPMENT_STATUS_LABELS[shipment.status]}
+          </Badge>
+          {canManageDocuments && (
+            <ShipmentEditDialog
+              shipment={{
+                id: shipment.id,
+                blNumber: shipment.blNumber,
+                status: shipment.status,
+                currentEta: shipment.currentEta,
+                actualDischargeDate: shipment.actualDischargeDate,
+                transitStartedAt: shipment.transitStartedAt,
+                transitArrivalEta: shipment.transitArrivalEta,
+                destinationWarehouse: shipment.destinationWarehouse,
+              }}
+            />
+          )}
+        </div>
       </div>
 
       <Card>
@@ -171,9 +215,28 @@ export default async function ShipmentDetailPage({
         </CardContent>
       </Card>
 
+      <TaxPaymentCard
+        shipmentId={shipment.id}
+        info={{
+          isTaxPaid: shipment.isTaxPaid,
+          taxLocation: shipment.taxLocation,
+          taxReceivedBy: shipment.taxReceivedBy,
+          taxAmount: shipment.taxAmount?.toString() ?? null,
+          taxCurrency: shipment.taxCurrency,
+          taxPaidAt: shipment.taxPaidAt,
+        }}
+        canManage={canManageDocuments}
+      />
+
       <DocumentsPanel
         shipmentId={shipment.id}
-        documents={shipment.documents}
+        documents={structuredDocuments}
+        canManage={canManageDocuments}
+      />
+
+      <GeneralDocumentsPanel
+        shipmentId={shipment.id}
+        documents={generalDocuments}
         canManage={canManageDocuments}
       />
 

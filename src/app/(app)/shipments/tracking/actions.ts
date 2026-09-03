@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { ShipmentStatus } from "@prisma/client"
+import { RwandanDestination, ShipmentStatus } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
@@ -18,6 +18,13 @@ const updateSchema = z.object({
   shipmentId: z.string().min(1),
   status: z.nativeEnum(ShipmentStatus),
   currentEta: z.string().min(1, "Current ETA is required"),
+  // Set when the admin confirms/adjusts the arrival datetime for
+  // ARRIVED_PORT_OF_DISCHARGE, instead of always defaulting to "now".
+  actualDischargeDate: z.string().optional(),
+  // Set when the admin records road-transit details for LOADED_ROAD_TRANSIT.
+  transitStartedAt: z.string().optional(),
+  transitArrivalEta: z.string().optional(),
+  destinationWarehouse: z.nativeEnum(RwandanDestination).optional(),
 })
 
 const DETENTION_FREE_TIME_DAYS = 30
@@ -26,6 +33,10 @@ export async function updateShipmentTracking(input: {
   shipmentId: string
   status: ShipmentStatus
   currentEta: string
+  actualDischargeDate?: string
+  transitStartedAt?: string
+  transitArrivalEta?: string
+  destinationWarehouse?: RwandanDestination
 }) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = updateSchema.parse(input)
@@ -70,11 +81,19 @@ export async function updateShipmentTracking(input: {
         parsed.status === "SHIPPED_ON_BOARD" && !shipment.shippedOnBoardDate
           ? new Date()
           : undefined,
-      actualDischargeDate:
-        ARRIVED_OR_LATER_STATUSES.includes(parsed.status) &&
-        !shipment.actualDischargeDate
+      actualDischargeDate: parsed.actualDischargeDate
+        ? new Date(parsed.actualDischargeDate)
+        : ARRIVED_OR_LATER_STATUSES.includes(parsed.status) &&
+            !shipment.actualDischargeDate
           ? new Date()
           : undefined,
+      transitStartedAt: parsed.transitStartedAt
+        ? new Date(parsed.transitStartedAt)
+        : undefined,
+      transitArrivalEta: parsed.transitArrivalEta
+        ? new Date(parsed.transitArrivalEta)
+        : undefined,
+      destinationWarehouse: parsed.destinationWarehouse ?? undefined,
     },
   })
 

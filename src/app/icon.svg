@@ -1,0 +1,12 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .body { fill: #006aa3; }
+    @media (prefers-color-scheme: dark) {
+      .body { fill: #09b7dc; }
+    }
+  </style>
+  <rect class="body" x="3" y="7" width="26" height="19" rx="3" stroke="rgba(0,0,0,0.15)" stroke-width="1" />
+  <line x1="9" y1="11" x2="9" y2="23" stroke="rgba(0,0,0,0.25)" stroke-width="1.6" stroke-linecap="round" />
+  <line x1="15" y1="11" x2="15" y2="23" stroke="rgba(0,0,0,0.25)" stroke-width="1.6" stroke-linecap="round" />
+  <line x1="21" y1="11" x2="21" y2="23" stroke="rgba(0,0,0,0.25)" stroke-width="1.6" stroke-linecap="round" />
+</svg>

@@ -1,7 +1,7 @@
 import { NotificationChannel } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
-import { sendWhatsAppMessage } from "@/lib/whatsapp"
+import { normalizePhone, sendWhatsAppMessage } from "@/lib/whatsapp"
 
 export async function createNotification({
   userId,
@@ -37,7 +37,31 @@ export async function createNotification({
         },
       })
     }
+
+    await notifyExtraRecipients(message, user?.phone)
   }
 
   return notification
+}
+
+// Admin-managed numbers (not tied to a User account) that get a copy of
+// every WhatsApp notification. Best-effort: failures here don't affect the
+// primary notification's stored status.
+async function notifyExtraRecipients(message: string, primaryPhone?: string) {
+  const recipients = await prisma.whatsAppRecipient.findMany({
+    where: { isActive: true },
+    select: { phoneNumber: true },
+  })
+
+  const primaryNormalized = primaryPhone ? normalizePhone(primaryPhone) : null
+
+  await Promise.all(
+    recipients
+      .filter((r) => normalizePhone(r.phoneNumber) !== primaryNormalized)
+      .map((r) =>
+        sendWhatsAppMessage(r.phoneNumber, message).catch((err) => {
+          console.error(`[whatsapp:extra-recipient-failed] to=${r.phoneNumber}`, err)
+        })
+      )
+  )
 }

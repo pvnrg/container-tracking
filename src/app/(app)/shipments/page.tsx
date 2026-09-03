@@ -1,10 +1,11 @@
 import Link from "next/link"
-import { Plus, Ship } from "lucide-react"
+import { Plus } from "lucide-react"
 
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/empty-state"
+import { ContainerStackIllustration } from "@/components/illustrations/container-stack"
 import {
   Table,
   TableBody,
@@ -19,6 +20,8 @@ import {
   SHIPMENT_STATUS_BADGE_CLASSES,
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
+
+import { ShipmentEditDialog } from "./shipment-edit-dialog"
 
 export default async function ShipmentsPage() {
   const session = await auth()
@@ -57,14 +60,17 @@ export default async function ShipmentsPage() {
               <TableHead>Containers</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Current ETA</TableHead>
+              {canCreate && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {shipments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="p-0">
+                <TableCell colSpan={canCreate ? 7 : 6} className="p-0">
                   <EmptyState
-                    icon={Ship}
+                    illustration={
+                      <ContainerStackIllustration className="w-40 opacity-80" />
+                    }
                     title="No shipments yet"
                     description={
                       canCreate
@@ -97,6 +103,22 @@ export default async function ShipmentsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>{s.currentEta.toLocaleDateString()}</TableCell>
+                {canCreate && (
+                  <TableCell className="text-right">
+                    <ShipmentEditDialog
+                      shipment={{
+                        id: s.id,
+                        blNumber: s.blNumber,
+                        status: s.status,
+                        currentEta: s.currentEta,
+                        actualDischargeDate: s.actualDischargeDate,
+                        transitStartedAt: s.transitStartedAt,
+                        transitArrivalEta: s.transitArrivalEta,
+                        destinationWarehouse: s.destinationWarehouse,
+                      }}
+                    />
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

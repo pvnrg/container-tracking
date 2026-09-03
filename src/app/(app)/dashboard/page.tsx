@@ -1,9 +1,23 @@
 import Link from "next/link"
-import { Activity, Package, Ship, Anchor, CheckCircle2, Timer } from "lucide-react"
+import {
+  Activity,
+  AlertTriangle,
+  Anchor,
+  CheckCircle2,
+  CircleCheck,
+  FileClock,
+  Flame,
+  OctagonAlert,
+  Package,
+  Ship,
+  Timer,
+  Truck,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/empty-state"
+import { HorizontalBarChart } from "@/components/horizontal-bar-chart"
 import {
   DETENTION_RISK_CLASSES,
   DETENTION_RISK_LABELS,
@@ -23,13 +37,57 @@ function daysUntil(date: Date) {
 }
 
 export default async function DashboardPage() {
-  const [total, inTransit, atPort, completed, active] = await Promise.all([
+  const [
+    total,
+    inTransit,
+    atPort,
+    completed,
+    active,
+    overdueEtas,
+    pendingDocVerifications,
+  ] = await Promise.all([
     prisma.shipment.count(),
     prisma.shipment.count({ where: { status: "IN_TRANSIT_SEA" } }),
     prisma.shipment.count({ where: { status: "ARRIVED_PORT_OF_DISCHARGE" } }),
     prisma.shipment.count({ where: { status: "COMPLETED" } }),
     prisma.shipment.count({ where: { status: { not: "COMPLETED" } } }),
+    prisma.shipment.count({
+      where: {
+        currentEta: { lt: new Date() },
+        status: { notIn: ARRIVED_OR_LATER_STATUSES },
+      },
+    }),
+    prisma.document.count({ where: { isVerified: false } }),
   ])
+
+  const [pipelineAtSea, pipelineAtPort, pipelineInland, pipelineCompleted] =
+    await Promise.all([
+      prisma.shipment.count({
+        where: { status: { in: ["SHIPPED_ON_BOARD", "IN_TRANSIT_SEA"] } },
+      }),
+      prisma.shipment.count({
+        where: {
+          status: { in: ["ARRIVED_PORT_OF_DISCHARGE", "CUSTOMS_PROCESSING"] },
+        },
+      }),
+      prisma.shipment.count({
+        where: {
+          status: {
+            in: ["CUSTOMS_CLEARED", "LOADED_ROAD_TRANSIT", "ARRIVED_DESTINATION"],
+          },
+        },
+      }),
+      prisma.shipment.count({
+        where: { status: { in: ["OFFLOADED", "COMPLETED"] } },
+      }),
+    ])
+
+  const pipelineItems = [
+    { key: "at-sea", label: "At Sea", value: pipelineAtSea, colorClass: "bg-chart-1", icon: Ship },
+    { key: "at-port", label: "At Port / Customs", value: pipelineAtPort, colorClass: "bg-chart-3", icon: Anchor },
+    { key: "inland", label: "Inland Transit", value: pipelineInland, colorClass: "bg-chart-4", icon: Truck },
+    { key: "completed", label: "Completed", value: pipelineCompleted, colorClass: "bg-chart-5", icon: CheckCircle2 },
+  ]
 
   const stats = [
     {
@@ -62,7 +120,26 @@ export default async function DashboardPage() {
       icon: CheckCircle2,
       classes: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     },
+    {
+      label: "Overdue ETAs",
+      value: overdueEtas,
+      icon: AlertTriangle,
+      classes: "bg-red-500/10 text-red-700 dark:text-red-400",
+    },
+    {
+      label: "Pending Doc. Verifications",
+      value: pendingDocVerifications,
+      icon: FileClock,
+      classes: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    },
   ]
+
+  const detentionRiskIcons: Record<DetentionRiskLevel, typeof CircleCheck> = {
+    normal: CircleCheck,
+    warning: AlertTriangle,
+    critical: OctagonAlert,
+    overdue: Flame,
+  }
 
   const activeTrackers = await prisma.detentionTracker.findMany({
     where: { returnedToDepotDate: null, clockStartDate: { not: null } },
@@ -99,6 +176,23 @@ export default async function DashboardPage() {
     .sort((a, b) => a.daysRemaining - b.daysRemaining)
     .slice(0, 5)
 
+  const detentionRiskBarColors: Record<DetentionRiskLevel, string> = {
+    normal: "bg-emerald-500",
+    warning: "bg-amber-500",
+    critical: "bg-orange-500",
+    overdue: "bg-red-500",
+  }
+
+  const detentionRiskItems = (Object.keys(riskCounts) as DetentionRiskLevel[]).map(
+    (level) => ({
+      key: level,
+      label: DETENTION_RISK_LABELS[level],
+      value: riskCounts[level],
+      colorClass: detentionRiskBarColors[level],
+      icon: detentionRiskIcons[level],
+    })
+  )
+
   const upcomingShipments = await prisma.shipment.findMany({
     where: { status: { notIn: ARRIVED_OR_LATER_STATUSES } },
     select: { id: true, blNumber: true, dischargePort: true, currentEta: true },
@@ -109,7 +203,7 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label}>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -132,12 +226,23 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Shipment Pipeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <HorizontalBarChart items={pipelineItems} />
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Demurrage Risk Monitor</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+            <HorizontalBarChart items={detentionRiskItems} />
+
             <div className="flex flex-wrap gap-2">
               {(Object.keys(riskCounts) as DetentionRiskLevel[]).map((level) => (
                 <Badge
