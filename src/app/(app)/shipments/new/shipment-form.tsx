@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { BlType, DischargePort, RwandanDestination } from "@prisma/client"
 import { toast } from "sonner"
-import { Check, Plus, Trash2 } from "lucide-react"
+import { Check, Container, Package, Plus, Receipt, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -125,7 +125,7 @@ export function ShipmentForm() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2.5">
-            <StepBadge step={1} />
+            <SectionIcon icon={Receipt} />
             Bill of Lading Details
           </CardTitle>
           <CardDescription>
@@ -246,7 +246,7 @@ export function ShipmentForm() {
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2.5">
-              <StepBadge step={2} />
+              <SectionIcon icon={Container} />
               Containers
             </CardTitle>
             <CardDescription>
@@ -274,8 +274,8 @@ export function ShipmentForm() {
               {index > 0 && <Separator className="mb-4" />}
               <div className="flex items-center justify-between">
                 <h3 className="flex items-center gap-2 text-sm font-medium">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-                    {index + 1}
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <Package className="size-3" />
                   </span>
                   Container {index + 1}
                 </h3>
@@ -385,10 +385,10 @@ export function ShipmentForm() {
   )
 }
 
-function StepBadge({ step }: { step: number }) {
+function SectionIcon({ icon: Icon }: { icon: typeof Receipt }) {
   return (
-    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-      {step}
+    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <Icon className="size-3.5" />
     </span>
   )
 }
