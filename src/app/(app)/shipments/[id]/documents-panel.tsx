@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { DocumentStage, DocumentType } from "@prisma/client"
-import { CircleCheck, Download, Trash2, Upload } from "lucide-react"
+import { CircleCheck, Download, Eye, FileQuestion, Trash2, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,7 @@ import {
   DOCUMENT_TYPE_LABELS,
   STAGE_DOCUMENT_TYPES,
 } from "@/lib/document-labels"
+import { formatDateTime } from "@/lib/format"
 
 import { deleteDocument, uploadDocument, verifyDocument } from "./documents-actions"
 
@@ -44,8 +45,11 @@ export type DocumentRow = {
   type: DocumentType
   fileName: string
   fileSize: number
+  mimeType: string
   isVerified: boolean
+  verifiedAt: Date | null
   comment: string | null
+  createdAt: Date
   uploadedBy: { name: string }
 }
 
@@ -168,66 +172,142 @@ function DocumentRowItem({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border px-3 py-2 text-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="font-medium">{doc.fileName}</span>
-          <span className="text-xs text-muted-foreground">
-            {DOCUMENT_TYPE_LABELS[doc.type]} · {(doc.fileSize / 1024).toFixed(0)} KB ·
-            Uploaded by {doc.uploadedBy.name}
+    <div className="flex flex-col gap-2 rounded-lg border px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-col">
+        <span className="font-medium">{doc.fileName}</span>
+        <span className="text-xs text-muted-foreground">
+          {DOCUMENT_TYPE_LABELS[doc.type]} · {(doc.fileSize / 1024).toFixed(0)} KB ·
+          Uploaded by {doc.uploadedBy.name}
+        </span>
+        {doc.comment && (
+          <span className="mt-0.5 truncate text-xs text-muted-foreground italic">
+            &ldquo;{doc.comment}&rdquo;
           </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className={
-              DOCUMENT_STATUS_BADGE_CLASSES[doc.isVerified ? "verified" : "uploaded"]
-            }
-          >
-            {doc.isVerified ? "Verified" : "Unverified"}
-          </Badge>
-          <a
-            href={`/api/documents/${doc.id}/download`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
-          >
-            <Download className="size-3.5" />
-            Download
-          </a>
-          {canManage && !doc.isVerified && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={isBusy}
-              onClick={handleVerify}
-            >
-              <CircleCheck data-icon="inline-start" />
-              Verify
-            </Button>
-          )}
-          {canManage && (
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              disabled={isBusy}
-              onClick={handleDelete}
-            >
-              <Trash2 data-icon="inline-start" />
-              Delete
-            </Button>
-          )}
-        </div>
+        )}
       </div>
-      {doc.comment && (
-        <p className="rounded-md bg-muted/50 px-2 py-1.5 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Comment: </span>
-          {doc.comment}
-        </p>
-      )}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+        <Badge
+          variant="outline"
+          className={
+            DOCUMENT_STATUS_BADGE_CLASSES[doc.isVerified ? "verified" : "uploaded"]
+          }
+        >
+          {doc.isVerified ? "Verified" : "Unverified"}
+        </Badge>
+        <DocumentViewDialog doc={doc} />
+        {canManage && !doc.isVerified && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isBusy}
+            onClick={handleVerify}
+          >
+            <CircleCheck data-icon="inline-start" />
+            Verify
+          </Button>
+        )}
+        {canManage && (
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            disabled={isBusy}
+            onClick={handleDelete}
+          >
+            <Trash2 data-icon="inline-start" />
+            Delete
+          </Button>
+        )}
+      </div>
     </div>
+  )
+}
+
+function DocumentViewDialog({ doc }: { doc: DocumentRow }) {
+  const fileUrl = `/api/documents/${doc.id}/download`
+  const isImage = doc.mimeType.startsWith("image/")
+  const isPdf = doc.mimeType === "application/pdf"
+
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={
+          <Button type="button" size="sm" variant="outline">
+            <Eye data-icon="inline-start" />
+            View
+          </Button>
+        }
+      />
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{doc.fileName}</DialogTitle>
+          <DialogDescription>
+            {DOCUMENT_TYPE_LABELS[doc.type]} · {DOCUMENT_STAGE_LABELS[doc.stage]}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <Badge
+              variant="outline"
+              className={
+                DOCUMENT_STATUS_BADGE_CLASSES[doc.isVerified ? "verified" : "uploaded"]
+              }
+            >
+              {doc.isVerified ? "Verified" : "Unverified"}
+            </Badge>
+            <span className="text-muted-foreground">
+              Uploaded by {doc.uploadedBy.name} on {formatDateTime(doc.createdAt)}
+            </span>
+          </div>
+          {doc.isVerified && doc.verifiedAt && (
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Verified on {formatDateTime(doc.verifiedAt)}
+            </p>
+          )}
+
+          {doc.comment && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+              <p className="text-xs font-medium text-muted-foreground">Comment</p>
+              <p>{doc.comment}</p>
+            </div>
+          )}
+
+          <div className="overflow-hidden rounded-lg border bg-muted/30">
+            {isImage ? (
+              // eslint-disable-next-line @next/next/no-img-element -- authenticated route, not a static asset Next can optimize
+              <img
+                src={fileUrl}
+                alt={doc.fileName}
+                className="max-h-[420px] w-full object-contain"
+              />
+            ) : isPdf ? (
+              <iframe src={fileUrl} title={doc.fileName} className="h-[420px] w-full" />
+            ) : (
+              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-muted-foreground">
+                <FileQuestion className="size-8" />
+                <p>Preview isn&apos;t available for this file type.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            nativeButton={false}
+            render={
+              <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                <Download data-icon="inline-start" />
+                Download
+              </a>
+            }
+          />
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
