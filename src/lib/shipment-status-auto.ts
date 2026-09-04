@@ -69,8 +69,7 @@ export async function maybeAutoAdvanceStatus({
 
   let furthestEligible: ShipmentStatus | null = null
   for (const stage of STAGE_ORDER) {
-    const stageDocs = structuredDocs.filter((d) => d.stage === stage)
-    if (!isStageComplete(stage, stageDocs)) continue
+    if (!isStageComplete(stage, structuredDocs)) continue
 
     const target = STAGE_STATUS_MAP[stage]
     if (!furthestEligible || statusIndex(target) > statusIndex(furthestEligible)) {

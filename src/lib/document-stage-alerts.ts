@@ -1,6 +1,6 @@
 import { DocumentStage, DocumentType } from "@prisma/client"
 
-import { STAGE_DOCUMENT_TYPES } from "./document-labels"
+import { STAGE_DOCUMENT_TYPES, getVisibleDocumentTypes } from "./document-labels"
 
 // Chronological order documents should land in as a shipment progresses.
 const STAGE_ORDER: DocumentStage[] = [
@@ -28,9 +28,23 @@ const STAGE_REQUIRES_ANY: Partial<Record<DocumentStage, boolean>> = {
 
 export type StageDoc = { stage: DocumentStage; type: DocumentType; isVerified: boolean }
 
-export function isStageComplete(stage: DocumentStage, docs: StageDoc[]) {
+/**
+ * Whether a stage is fully verified. `documents` should include ALL of the
+ * shipment's structured documents (every stage), not just this stage's --
+ * FINAL_CLEARANCE's requirement depends on what PORT_CLEARANCE resolved to
+ * (see getVisibleDocumentTypes), so it needs visibility into that stage too.
+ */
+export function isStageComplete(stage: DocumentStage, documents: StageDoc[]) {
+  const verifiedTypes = new Set(
+    documents.filter((d) => d.isVerified).map((d) => d.type)
+  )
+
+  if (stage === "FINAL_CLEARANCE") {
+    const requiredTypes = getVisibleDocumentTypes(stage, documents)
+    return requiredTypes.every((t) => verifiedTypes.has(t))
+  }
+
   const types = STAGE_DOCUMENT_TYPES[stage]
-  const verifiedTypes = new Set(docs.filter((d) => d.isVerified).map((d) => d.type))
   return STAGE_REQUIRES_ANY[stage]
     ? types.some((t) => verifiedTypes.has(t))
     : types.every((t) => verifiedTypes.has(t))
@@ -55,7 +69,7 @@ export function findStageSkipAlert(
   )
 
   const incompleteIndex = STAGE_ORDER.findIndex(
-    (stage) => !isStageComplete(stage, structured.filter((d) => d.stage === stage))
+    (stage) => !isStageComplete(stage, structured)
   )
   if (incompleteIndex === -1) return null
 

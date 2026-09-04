@@ -46,13 +46,52 @@ export const STAGE_TYPE_GROUPS: Partial<Record<DocumentStage, DocumentType[][]>>
   PORT_CLEARANCE: [["CUSTOMS_IM4"], ["CUSTOMS_WH7", "CUSTOMS_T1"]],
 }
 
+type LooseDoc = { stage: DocumentStage | null; type: DocumentType | null }
+
+// Stage 4's document requirement isn't fixed -- it depends on which
+// customs declaration group was chosen back in Stage 2 (an IM4-cleared
+// shipment only ever needs a Warehouse Offload Delivery Note; a
+// WH7/T1-cleared one only needs a Destination Clearance Document). Until
+// Stage 2 has decided, both remain visible/required, matching the prior
+// (pre-dependency) behavior.
+export type PortClearanceChoice = "IM4" | "WH7_T1" | null
+
+export function getPortClearanceChoice(documents: LooseDoc[]): PortClearanceChoice {
+  const types = documents
+    .filter((d) => d.stage === "PORT_CLEARANCE")
+    .map((d) => d.type)
+  if (types.includes("CUSTOMS_IM4")) return "IM4"
+  if (types.some((t) => t === "CUSTOMS_WH7" || t === "CUSTOMS_T1")) return "WH7_T1"
+  return null
+}
+
+function getFinalClearanceTypes(choice: PortClearanceChoice): DocumentType[] {
+  if (choice === "IM4") return ["DELIVERY_NOTE"]
+  if (choice === "WH7_T1") return ["DESTINATION_CLEARANCE"]
+  return STAGE_DOCUMENT_TYPES.FINAL_CLEARANCE
+}
+
+/**
+ * The document types currently relevant for a stage, given the shipment's
+ * documents across ALL stages (not just this one -- FINAL_CLEARANCE needs
+ * to see PORT_CLEARANCE's documents to resolve its own requirement). Used
+ * both for what's shown/offered in the UI and for what counts toward
+ * completion.
+ */
 export function getVisibleDocumentTypes(
   stage: DocumentStage,
-  existingTypes: DocumentType[]
+  documents: LooseDoc[]
 ): DocumentType[] {
+  if (stage === "FINAL_CLEARANCE") {
+    return getFinalClearanceTypes(getPortClearanceChoice(documents))
+  }
+
   const groups = STAGE_TYPE_GROUPS[stage]
   if (!groups) return STAGE_DOCUMENT_TYPES[stage]
 
+  const existingTypes = documents
+    .filter((d) => d.stage === stage)
+    .map((d) => d.type)
   const chosenGroup = groups.find((group) =>
     group.some((t) => existingTypes.includes(t))
   )

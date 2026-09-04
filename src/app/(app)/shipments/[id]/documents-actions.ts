@@ -62,17 +62,14 @@ export async function uploadDocument(formData: FormData) {
     throw new Error("Shipment not found")
   }
 
-  const stageDocs = await prisma.document.findMany({
-    where: { shipmentId: parsed.shipmentId, stage: parsed.stage },
-    select: { type: true },
+  const shipmentDocs = await prisma.document.findMany({
+    where: { shipmentId: parsed.shipmentId, stage: { not: null } },
+    select: { stage: true, type: true },
   })
-  const visibleTypes = getVisibleDocumentTypes(
-    parsed.stage,
-    stageDocs.map((d) => d.type).filter((t): t is DocumentType => t !== null)
-  )
+  const visibleTypes = getVisibleDocumentTypes(parsed.stage, shipmentDocs)
   if (!visibleTypes.includes(parsed.type)) {
     throw new Error(
-      `${DOCUMENT_TYPE_LABELS[parsed.type]} no longer applies once another declaration type has been uploaded for this stage.`
+      `${DOCUMENT_TYPE_LABELS[parsed.type]} doesn't apply to this shipment based on its other documents.`
     )
   }
 

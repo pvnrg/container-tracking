@@ -48,6 +48,7 @@ import {
   DOCUMENT_STAGE_NOTES,
   DOCUMENT_STATUS_BADGE_CLASSES,
   DOCUMENT_TYPE_LABELS,
+  getPortClearanceChoice,
   getVisibleDocumentTypes,
 } from "@/lib/document-labels"
 import { formatDateTime } from "@/lib/format"
@@ -95,9 +96,26 @@ const STAGE_PROGRESS_TEXT: Record<StageStatus, string> = {
   pending: "Not started",
 }
 
-function getStageStatus(stage: DocumentStage, documents: DocumentRow[]): StageStatus {
-  if (isStageComplete(stage, documents)) return "complete"
-  return documents.length > 0 ? "partial" : "pending"
+// `allDocuments` must include every stage's documents, not just this one --
+// FINAL_CLEARANCE's requirement depends on what PORT_CLEARANCE resolved to.
+function finalClearanceNote(
+  stage: DocumentStage,
+  allDocuments: DocumentRow[]
+): string | undefined {
+  if (stage !== "FINAL_CLEARANCE") return undefined
+  const choice = getPortClearanceChoice(allDocuments)
+  if (choice === "IM4") {
+    return "Based on the Stage 2 IM4 declaration, only the Warehouse Offload Delivery Note applies."
+  }
+  if (choice === "WH7_T1") {
+    return "Based on the Stage 2 customs declaration, only the Destination Clearance Document applies."
+  }
+  return undefined
+}
+
+function getStageStatus(stage: DocumentStage, allDocuments: DocumentRow[]): StageStatus {
+  if (isStageComplete(stage, allDocuments)) return "complete"
+  return allDocuments.some((d) => d.stage === stage) ? "partial" : "pending"
 }
 
 export function DocumentsPanel({
@@ -121,8 +139,7 @@ export function DocumentsPanel({
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stages.map((stage) => {
-          const stageDocs = documents.filter((d) => d.stage === stage)
-          const status = getStageStatus(stage, stageDocs)
+          const status = getStageStatus(stage, documents)
           const Icon = STAGE_PROGRESS_ICONS[status]
           return (
             <div
@@ -149,7 +166,7 @@ export function DocumentsPanel({
           key={stage}
           shipmentId={shipmentId}
           stage={stage}
-          documents={documents.filter((d) => d.stage === stage)}
+          allDocuments={documents}
           agent={stageAgents[stage] ?? null}
           roadTransitDetails={roadTransitDetails}
           canManage={canManage}
@@ -162,24 +179,22 @@ export function DocumentsPanel({
 function StageCard({
   shipmentId,
   stage,
-  documents,
+  allDocuments,
   agent,
   roadTransitDetails,
   canManage,
 }: {
   shipmentId: string
   stage: DocumentStage
-  documents: DocumentRow[]
+  allDocuments: DocumentRow[]
   agent: StageAgentInfo | null
   roadTransitDetails: RoadTransitDetailsInfo | null
   canManage: boolean
 }) {
-  const types = getVisibleDocumentTypes(
-    stage,
-    documents.map((d) => d.type)
-  )
-  const note = DOCUMENT_STAGE_NOTES[stage]
-  const status = getStageStatus(stage, documents)
+  const documents = allDocuments.filter((d) => d.stage === stage)
+  const types = getVisibleDocumentTypes(stage, allDocuments)
+  const note = DOCUMENT_STAGE_NOTES[stage] ?? finalClearanceNote(stage, allDocuments)
+  const status = getStageStatus(stage, allDocuments)
   const [open, setOpen] = useState(status !== "complete")
 
   return (
