@@ -29,6 +29,7 @@ import { DocumentsPanel } from "./documents-panel"
 import { GeneralDocumentsPanel } from "./general-documents-panel"
 import { TaxPaymentCard } from "./tax-payment-card"
 import { TransporterAssign } from "./transporter-assign"
+import { ShipmentDeleteButton } from "../shipment-delete-button"
 import { ShipmentEditDialog } from "../shipment-edit-dialog"
 
 export default async function ShipmentDetailPage({
@@ -79,8 +80,6 @@ export default async function ShipmentDetailPage({
   const details: [string, React.ReactNode][] = [
     ["BL Type", BL_TYPE_LABELS[shipment.blType]],
     ["Shipping Line", shipment.shippingLine],
-    ["Vessel / Voyage", [shipment.vesselName, shipment.voyageNumber].filter(Boolean).join(" / ") || "—"],
-    ["Booking Reference", shipment.bookingRef ?? "—"],
     ["Origin", [shipment.originPort, shipment.originCountry].filter(Boolean).join(", ")],
     ["Discharge Port", DISCHARGE_PORT_LABELS[shipment.dischargePort]],
     [
@@ -142,18 +141,25 @@ export default async function ShipmentDetailPage({
             {SHIPMENT_STATUS_LABELS[shipment.status]}
           </Badge>
           {canManageDocuments && (
-            <ShipmentEditDialog
-              shipment={{
-                id: shipment.id,
-                blNumber: shipment.blNumber,
-                status: shipment.status,
-                currentEta: shipment.currentEta,
-                actualDischargeDate: shipment.actualDischargeDate,
-                transitStartedAt: shipment.transitStartedAt,
-                transitArrivalEta: shipment.transitArrivalEta,
-                destinationWarehouse: shipment.destinationWarehouse,
-              }}
-            />
+            <>
+              <ShipmentEditDialog
+                shipment={{
+                  id: shipment.id,
+                  blNumber: shipment.blNumber,
+                  status: shipment.status,
+                  currentEta: shipment.currentEta,
+                  actualDischargeDate: shipment.actualDischargeDate,
+                  transitStartedAt: shipment.transitStartedAt,
+                  transitArrivalEta: shipment.transitArrivalEta,
+                  destinationWarehouse: shipment.destinationWarehouse,
+                }}
+              />
+              <ShipmentDeleteButton
+                shipmentId={shipment.id}
+                blNumber={shipment.blNumber}
+                redirectTo="/shipments"
+              />
+            </>
           )}
         </div>
       </div>
@@ -183,7 +189,6 @@ export default async function ShipmentDetailPage({
                 <TableHead>Container Number</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Seal Number</TableHead>
-                <TableHead>Tare (kg)</TableHead>
                 <TableHead>Gross (kg)</TableHead>
                 <TableHead>Inventory Reference</TableHead>
                 <TableHead>Status</TableHead>
@@ -197,7 +202,6 @@ export default async function ShipmentDetailPage({
                   </TableCell>
                   <TableCell>{c.containerType}</TableCell>
                   <TableCell>{c.sealNumber ?? "—"}</TableCell>
-                  <TableCell>{c.tareWeightKg?.toString() ?? "—"}</TableCell>
                   <TableCell>{c.grossWeightKg?.toString() ?? "—"}</TableCell>
                   <TableCell>{c.inventoryReference}</TableCell>
                   <TableCell>

@@ -23,6 +23,7 @@ import {
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
 
+import { ShipmentDeleteButton } from "./shipment-delete-button"
 import { ShipmentEditDialog } from "./shipment-edit-dialog"
 
 const FILTER_LABELS: Record<string, string> = {
@@ -156,18 +157,21 @@ export default async function ShipmentsPage({
                 <TableCell>{s.currentEta.toLocaleDateString()}</TableCell>
                 {canCreate && (
                   <TableCell className="text-right">
-                    <ShipmentEditDialog
-                      shipment={{
-                        id: s.id,
-                        blNumber: s.blNumber,
-                        status: s.status,
-                        currentEta: s.currentEta,
-                        actualDischargeDate: s.actualDischargeDate,
-                        transitStartedAt: s.transitStartedAt,
-                        transitArrivalEta: s.transitArrivalEta,
-                        destinationWarehouse: s.destinationWarehouse,
-                      }}
-                    />
+                    <div className="flex justify-end gap-2">
+                      <ShipmentEditDialog
+                        shipment={{
+                          id: s.id,
+                          blNumber: s.blNumber,
+                          status: s.status,
+                          currentEta: s.currentEta,
+                          actualDischargeDate: s.actualDischargeDate,
+                          transitStartedAt: s.transitStartedAt,
+                          transitArrivalEta: s.transitArrivalEta,
+                          destinationWarehouse: s.destinationWarehouse,
+                        }}
+                      />
+                      <ShipmentDeleteButton shipmentId={s.id} blNumber={s.blNumber} />
+                    </div>
                   </TableCell>
                 )}
               </TableRow>

@@ -7,6 +7,7 @@ import { BlType, DischargePort, Prisma, RwandanDestination } from "@prisma/clien
 import { logShipmentAudit } from "@/lib/audit"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-utils"
+import { deleteShipmentFiles } from "@/lib/storage"
 
 const containerSchema = z.object({
   containerNumber: z.string().min(1, "Container number is required"),
@@ -89,6 +90,25 @@ export async function createShipment(values: ShipmentFormValues) {
     }
     throw err
   }
+}
+
+export async function deleteShipment(shipmentId: string) {
+  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    select: { id: true },
+  })
+  if (!shipment) {
+    throw new Error("Shipment not found")
+  }
+
+  // Cascades to containers, detention trackers, documents, and audit logs
+  // (see the onDelete: Cascade relations in schema.prisma).
+  await prisma.shipment.delete({ where: { id: shipmentId } })
+  await deleteShipmentFiles(shipmentId).catch(() => {})
+
+  revalidatePath("/shipments")
 }
 
 export async function assignTransporter(input: {

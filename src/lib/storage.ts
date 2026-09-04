@@ -44,3 +44,7 @@ export async function readFile(key: string): Promise<Buffer> {
 export async function deleteFile(key: string): Promise<void> {
   await rm(resolveKeyPath(key), { force: true })
 }
+
+export async function deleteShipmentFiles(shipmentId: string): Promise<void> {
+  await rm(resolveKeyPath(shipmentId), { force: true, recursive: true })
+}
