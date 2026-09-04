@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   CircleCheck,
   FileClock,
+  FileWarning,
   Flame,
   OctagonAlert,
   Package,
@@ -24,6 +25,7 @@ import {
   DetentionRiskLevel,
   getDetentionRisk,
 } from "@/lib/detention"
+import { describeStageSkipAlert, findStageSkipAlert } from "@/lib/document-stage-alerts"
 import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import {
@@ -207,6 +209,22 @@ export default async function DashboardPage() {
     take: 5,
   })
 
+  const shipmentsForDocCheck = await prisma.shipment.findMany({
+    where: { status: { not: "COMPLETED" } },
+    select: {
+      id: true,
+      blNumber: true,
+      documents: { select: { stage: true, type: true, isVerified: true } },
+    },
+  })
+
+  const stageSkipAlerts = shipmentsForDocCheck
+    .map((s) => {
+      const alert = findStageSkipAlert(s.documents)
+      return alert ? { id: s.id, blNumber: s.blNumber, alert } : null
+    })
+    .filter((a): a is { id: string; blNumber: string; alert: NonNullable<ReturnType<typeof findStageSkipAlert>> } => a !== null)
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
@@ -241,6 +259,51 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           <HorizontalBarChart items={pipelineItems} />
+        </CardContent>
+      </Card>
+
+      <Card
+        className={cn(
+          stageSkipAlerts.length > 0 && "border-orange-600/30 bg-orange-500/5"
+        )}
+      >
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <FileWarning className="size-4.5 text-orange-600 dark:text-orange-400" />
+            <CardTitle>Document Stage Alerts</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {stageSkipAlerts.length === 0 ? (
+            <EmptyState
+              icon={FileWarning}
+              title="No out-of-order paperwork"
+              description="Shipments with later-stage documents uploaded before an earlier stage is complete will show up here."
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {stageSkipAlerts.map(({ id, blNumber, alert }) => (
+                <Link
+                  key={id}
+                  href={`/shipments/${id}`}
+                  className="flex flex-col gap-1 rounded-lg border border-orange-600/30 bg-orange-500/10 px-3 py-2 text-sm hover:bg-orange-500/20"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{blNumber}</span>
+                    <Badge
+                      variant="outline"
+                      className="border-orange-600/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
+                    >
+                      Out of order
+                    </Badge>
+                  </div>
+                  <span className="text-muted-foreground">
+                    {describeStageSkipAlert(alert)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
