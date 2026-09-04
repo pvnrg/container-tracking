@@ -89,7 +89,7 @@ export function describeAuditEntry(entry: {
     case "CONTAINER_RETURNED_TO_DEPOT":
       return `Container ${newV.containerNumber ?? ""} returned to depot on ${newV.returnedToDepotDate ?? ""}.`
     case "DOCUMENT_UPLOADED":
-      return `Uploaded "${newV.fileName ?? ""}" (${newV.type ?? newV.title ?? "General"}).`
+      return `Uploaded "${newV.fileName ?? ""}" (${newV.type ?? newV.title ?? "General"}).${newV.comment ? ` Comment: "${newV.comment}"` : ""}`
     case "DOCUMENT_VERIFIED":
       return `Verified "${newV.fileName ?? ""}".`
     case "DOCUMENT_DELETED":

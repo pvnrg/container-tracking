@@ -243,6 +243,7 @@ model Document {
   stage    DocumentStage?
   type     DocumentType?
   title    String?
+  comment  String?
   fileUrl  String
   fileName String
   fileSize Int

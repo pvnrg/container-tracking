@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   DOCUMENT_STAGE_LABELS,
   DOCUMENT_STAGE_NOTES,
@@ -44,6 +45,7 @@ export type DocumentRow = {
   fileName: string
   fileSize: number
   isVerified: boolean
+  comment: string | null
   uploadedBy: { name: string }
 }
 
@@ -58,13 +60,11 @@ export function DocumentsPanel({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Documents</h2>
-        {canManage && <UploadDocumentDialog shipmentId={shipmentId} />}
-      </div>
+      <h2 className="text-lg font-semibold">Documents</h2>
       {Object.values(DocumentStage).map((stage) => (
         <StageCard
           key={stage}
+          shipmentId={shipmentId}
           stage={stage}
           documents={documents.filter((d) => d.stage === stage)}
           canManage={canManage}
@@ -75,10 +75,12 @@ export function DocumentsPanel({
 }
 
 function StageCard({
+  shipmentId,
   stage,
   documents,
   canManage,
 }: {
+  shipmentId: string
   stage: DocumentStage
   documents: DocumentRow[]
   canManage: boolean
@@ -88,9 +90,14 @@ function StageCard({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{DOCUMENT_STAGE_LABELS[stage]}</CardTitle>
-        {note && <p className="text-xs text-muted-foreground">{note}</p>}
+      <CardHeader className="flex flex-row items-start justify-between gap-3">
+        <div>
+          <CardTitle className="text-base">{DOCUMENT_STAGE_LABELS[stage]}</CardTitle>
+          {note && <p className="text-xs text-muted-foreground">{note}</p>}
+        </div>
+        {canManage && (
+          <UploadDocumentDialog shipmentId={shipmentId} stage={stage} />
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap gap-2">
@@ -161,83 +168,97 @@ function DocumentRowItem({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-      <div className="flex flex-col">
-        <span className="font-medium">{doc.fileName}</span>
-        <span className="text-xs text-muted-foreground">
-          {DOCUMENT_TYPE_LABELS[doc.type]} · {(doc.fileSize / 1024).toFixed(0)} KB ·
-          Uploaded by {doc.uploadedBy.name}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Badge
-          variant="outline"
-          className={
-            DOCUMENT_STATUS_BADGE_CLASSES[doc.isVerified ? "verified" : "uploaded"]
-          }
-        >
-          {doc.isVerified ? "Verified" : "Unverified"}
-        </Badge>
-        <a
-          href={`/api/documents/${doc.id}/download`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
-        >
-          <Download className="size-3.5" />
-          Download
-        </a>
-        {canManage && !doc.isVerified && (
-          <Button
-            type="button"
-            size="sm"
+    <div className="flex flex-col gap-2 rounded-lg border px-3 py-2 text-sm">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="font-medium">{doc.fileName}</span>
+          <span className="text-xs text-muted-foreground">
+            {DOCUMENT_TYPE_LABELS[doc.type]} · {(doc.fileSize / 1024).toFixed(0)} KB ·
+            Uploaded by {doc.uploadedBy.name}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge
             variant="outline"
-            disabled={isBusy}
-            onClick={handleVerify}
+            className={
+              DOCUMENT_STATUS_BADGE_CLASSES[doc.isVerified ? "verified" : "uploaded"]
+            }
           >
-            <CircleCheck data-icon="inline-start" />
-            Verify
-          </Button>
-        )}
-        {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            disabled={isBusy}
-            onClick={handleDelete}
+            {doc.isVerified ? "Verified" : "Unverified"}
+          </Badge>
+          <a
+            href={`/api/documents/${doc.id}/download`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
           >
-            <Trash2 data-icon="inline-start" />
-            Delete
-          </Button>
-        )}
+            <Download className="size-3.5" />
+            Download
+          </a>
+          {canManage && !doc.isVerified && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isBusy}
+              onClick={handleVerify}
+            >
+              <CircleCheck data-icon="inline-start" />
+              Verify
+            </Button>
+          )}
+          {canManage && (
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={isBusy}
+              onClick={handleDelete}
+            >
+              <Trash2 data-icon="inline-start" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
+      {doc.comment && (
+        <p className="rounded-md bg-muted/50 px-2 py-1.5 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Comment: </span>
+          {doc.comment}
+        </p>
+      )}
     </div>
   )
 }
 
-function UploadDocumentDialog({ shipmentId }: { shipmentId: string }) {
+function UploadDocumentDialog({
+  shipmentId,
+  stage,
+}: {
+  shipmentId: string
+  stage: DocumentStage
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [stage, setStage] = useState<DocumentStage | "">("")
   const [type, setType] = useState<DocumentType | "">("")
   const [file, setFile] = useState<File | null>(null)
+  const [comment, setComment] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  const availableTypes = stage ? STAGE_DOCUMENT_TYPES[stage] : []
+  const availableTypes = STAGE_DOCUMENT_TYPES[stage]
 
   const reset = () => {
-    setStage("")
     setType("")
     setFile(null)
+    setComment("")
     setError(null)
   }
 
   const handleSubmit = async () => {
     setError(null)
-    if (!stage || !type || !file) {
-      setError("Select a stage, document type, and file")
+    if (!type || !file) {
+      setError("Select a document type and file")
       return
     }
     setIsSubmitting(true)
@@ -247,6 +268,9 @@ function UploadDocumentDialog({ shipmentId }: { shipmentId: string }) {
       formData.set("stage", stage)
       formData.set("type", type)
       formData.set("file", file)
+      if (comment.trim()) {
+        formData.set("comment", comment.trim())
+      }
       await uploadDocument(formData)
       toast.success("Document uploaded")
       setOpen(false)
@@ -269,7 +293,7 @@ function UploadDocumentDialog({ shipmentId }: { shipmentId: string }) {
     >
       <DialogTrigger
         render={
-          <Button>
+          <Button type="button" size="sm">
             <Upload data-icon="inline-start" />
             Upload Document
           </Button>
@@ -277,46 +301,20 @@ function UploadDocumentDialog({ shipmentId }: { shipmentId: string }) {
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
+          <DialogTitle>Upload Document — {DOCUMENT_STAGE_LABELS[stage]}</DialogTitle>
           <DialogDescription>
-            Attach a document to a stage for this shipment.
+            Attach a document to {DOCUMENT_STAGE_LABELS[stage]} for this shipment.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label>Stage</Label>
-            <Select
-              value={stage}
-              onValueChange={(v) => {
-                setStage(v as DocumentStage)
-                setType("")
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select stage">
-                  {(value: DocumentStage | null) =>
-                    value ? DOCUMENT_STAGE_LABELS[value] : "Select stage"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(DocumentStage).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {DOCUMENT_STAGE_LABELS[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex flex-col gap-1.5">
             <Label>Document Type</Label>
             <Select
               value={type}
               onValueChange={(v) => setType(v as DocumentType)}
             >
-              <SelectTrigger className="w-full" disabled={!stage}>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select document type">
                   {(value: DocumentType | null) =>
                     value ? DOCUMENT_TYPE_LABELS[value] : "Select document type"
@@ -338,6 +336,15 @@ function UploadDocumentDialog({ shipmentId }: { shipmentId: string }) {
             <Input
               type="file"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Comment (optional)</Label>
+            <Textarea
+              placeholder="Add any context for this document..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
             />
           </div>
 

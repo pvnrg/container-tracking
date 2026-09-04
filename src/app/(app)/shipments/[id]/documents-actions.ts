@@ -21,6 +21,7 @@ const uploadSchema = z
     shipmentId: z.string().min(1),
     stage: z.nativeEnum(DocumentStage),
     type: z.nativeEnum(DocumentType),
+    comment: z.string().optional(),
   })
   .refine((v) => STAGE_DOCUMENT_TYPES[v.stage].includes(v.type), {
     message: "Selected document type does not belong to the selected stage",
@@ -34,6 +35,7 @@ export async function uploadDocument(formData: FormData) {
     shipmentId: formData.get("shipmentId"),
     stage: formData.get("stage"),
     type: formData.get("type"),
+    comment: formData.get("comment") ?? undefined,
   })
 
   const file = formData.get("file")
@@ -64,11 +66,14 @@ export async function uploadDocument(formData: FormData) {
     buffer,
   })
 
+  const comment = parsed.comment?.trim() || null
+
   await prisma.document.create({
     data: {
       shipmentId: parsed.shipmentId,
       stage: parsed.stage,
       type: parsed.type,
+      comment,
       fileUrl: key,
       fileName: file.name,
       fileSize: file.size,
@@ -81,7 +86,11 @@ export async function uploadDocument(formData: FormData) {
     shipmentId: parsed.shipmentId,
     userId: session.user.id,
     action: "DOCUMENT_UPLOADED",
-    newValue: { fileName: file.name, type: DOCUMENT_TYPE_LABELS[parsed.type] },
+    newValue: {
+      fileName: file.name,
+      type: DOCUMENT_TYPE_LABELS[parsed.type],
+      comment: comment ?? undefined,
+    },
   })
 
   revalidatePath(`/shipments/${parsed.shipmentId}`)
