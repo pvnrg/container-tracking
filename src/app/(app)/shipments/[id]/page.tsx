@@ -52,6 +52,7 @@ export default async function ShipmentDetailPage({
         include: { uploadedBy: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
       },
+      stageAgents: true,
       auditLogs: {
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
@@ -62,6 +63,13 @@ export default async function ShipmentDetailPage({
   if (!shipment) {
     notFound()
   }
+
+  const stageAgents = Object.fromEntries(
+    shipment.stageAgents.map((a) => [
+      a.stage,
+      { name: a.name, contact: a.contact, position: a.position },
+    ])
+  ) as Partial<Record<DocumentStage, { name: string; contact: string; position: string | null }>>
 
   const transporters = canManageDocuments
     ? await prisma.user.findMany({
@@ -235,6 +243,7 @@ export default async function ShipmentDetailPage({
       <DocumentsPanel
         shipmentId={shipment.id}
         documents={structuredDocuments}
+        stageAgents={stageAgents}
         canManage={canManageDocuments}
       />
 

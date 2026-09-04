@@ -162,6 +162,7 @@ model Shipment {
 
   containers    Container[]
   documents     Document[]
+  stageAgents   StageAgent[]
   notifications Notification[]
   auditLogs     ShipmentAudit[]
 
@@ -259,6 +260,26 @@ model Document {
   updatedAt DateTime @updatedAt
 
   @@index([shipmentId, stage])
+}
+
+// The clearing/handling agent for one document stage of a shipment (e.g.
+// the customs broker for Stage 2). One shipment can have a different agent
+// per stage, so this is keyed by (shipmentId, stage) rather than living
+// directly on Shipment.
+model StageAgent {
+  id         String        @id @default(uuid())
+  shipmentId String
+  shipment   Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  stage      DocumentStage
+
+  name     String
+  contact  String
+  position String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shipmentId, stage])
 }
 
 // -------------------------------------------------------------

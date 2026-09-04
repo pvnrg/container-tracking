@@ -38,6 +38,7 @@ import {
 import { formatDateTime } from "@/lib/format"
 
 import { deleteDocument, uploadDocument, verifyDocument } from "./documents-actions"
+import { StageAgentBlock, type StageAgentInfo } from "./stage-agent"
 
 export type DocumentRow = {
   id: string
@@ -56,10 +57,12 @@ export type DocumentRow = {
 export function DocumentsPanel({
   shipmentId,
   documents,
+  stageAgents,
   canManage,
 }: {
   shipmentId: string
   documents: DocumentRow[]
+  stageAgents: Partial<Record<DocumentStage, StageAgentInfo>>
   canManage: boolean
 }) {
   return (
@@ -71,6 +74,7 @@ export function DocumentsPanel({
           shipmentId={shipmentId}
           stage={stage}
           documents={documents.filter((d) => d.stage === stage)}
+          agent={stageAgents[stage] ?? null}
           canManage={canManage}
         />
       ))}
@@ -82,11 +86,13 @@ function StageCard({
   shipmentId,
   stage,
   documents,
+  agent,
   canManage,
 }: {
   shipmentId: string
   stage: DocumentStage
   documents: DocumentRow[]
+  agent: StageAgentInfo | null
   canManage: boolean
 }) {
   const types = getVisibleDocumentTypes(
@@ -111,6 +117,14 @@ function StageCard({
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {stage === "PORT_CLEARANCE" && (
+          <StageAgentBlock
+            shipmentId={shipmentId}
+            stage={stage}
+            agent={agent}
+            canManage={canManage}
+          />
+        )}
         <div className="flex flex-wrap gap-2">
           {types.map((type) => {
             const docsForType = documents.filter((d) => d.type === type)
