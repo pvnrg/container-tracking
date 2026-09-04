@@ -153,7 +153,6 @@ export async function verifyDocument(documentId: string) {
   if (doc.stage) {
     const newStatus = await maybeAutoAdvanceStatus({
       shipmentId: doc.shipmentId,
-      stage: doc.stage,
       userId: session.user.id,
     })
     if (newStatus) {
