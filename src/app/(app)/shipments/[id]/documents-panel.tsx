@@ -232,7 +232,7 @@ function StageCard({
       </CardHeader>
       {open && (
         <CardContent className="flex flex-col gap-4">
-          {stage === "PORT_CLEARANCE" && (
+          {(stage === "PORT_CLEARANCE" || stage === "FINAL_CLEARANCE") && (
             <StageAgentBlock
               shipmentId={shipmentId}
               stage={stage}
