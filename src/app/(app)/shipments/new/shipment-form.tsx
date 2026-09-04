@@ -38,7 +38,6 @@ const containerSchema = z.object({
   containerNumber: z.string().min(1, "Required"),
   containerType: z.string().min(1, "Required"),
   sealNumber: z.string().optional(),
-  tareWeightKg: z.string().min(1, "Required"),
   grossWeightKg: z.string().min(1, "Required"),
   inventoryReference: z.string().min(1, "Required"),
   itemQuantity: z.string().min(1, "Required"),
@@ -48,9 +47,6 @@ const shipmentSchema = z.object({
   blNumber: z.string().min(1, "BL number is required"),
   blType: z.nativeEnum(BlType, { message: "Select a BL type" }),
   shippingLine: z.string().min(1, "Shipping line is required"),
-  vesselName: z.string().min(1, "Vessel name is required"),
-  voyageNumber: z.string().optional(),
-  bookingRef: z.string().optional(),
   originCountry: z.string().min(1, "Origin country is required"),
   originPort: z.string().min(1, "Origin port is required"),
   dischargePort: z.nativeEnum(DischargePort, {
@@ -72,7 +68,6 @@ const emptyContainer: FormValues["containers"][number] = {
   containerNumber: "",
   containerType: "40_HIGH_CUBE",
   sealNumber: "",
-  tareWeightKg: "",
   grossWeightKg: "",
   inventoryReference: "",
   itemQuantity: "",
@@ -109,7 +104,6 @@ export function ShipmentForm() {
         ...values,
         containers: values.containers.map((c) => ({
           ...c,
-          tareWeightKg: Number(c.tareWeightKg),
           grossWeightKg: Number(c.grossWeightKg),
           itemQuantity: Number(c.itemQuantity),
         })),
@@ -161,15 +155,6 @@ export function ShipmentForm() {
           </Field>
           <Field label="Shipping Line" error={errors.shippingLine?.message} required>
             <Input {...register("shippingLine")} placeholder="MSC" />
-          </Field>
-          <Field label="Vessel Name" error={errors.vesselName?.message} required>
-            <Input {...register("vesselName")} placeholder="MSC ASYA" />
-          </Field>
-          <Field label="Voyage Number" error={errors.voyageNumber?.message}>
-            <Input {...register("voyageNumber")} placeholder="MA622R" />
-          </Field>
-          <Field label="Booking Reference" error={errors.bookingRef?.message}>
-            <Input {...register("bookingRef")} />
           </Field>
           <Field label="Origin Country" error={errors.originCountry?.message} required>
             <Input {...register("originCountry")} placeholder="India" />
@@ -321,19 +306,6 @@ export function ShipmentForm() {
                     control={control}
                     name={`containers.${index}.sealNumber`}
                     render={({ field }) => <Input {...field} />}
-                  />
-                </Field>
-                <Field
-                  label="Tare Weight (kg)"
-                  error={errors.containers?.[index]?.tareWeightKg?.message}
-                  required
-                >
-                  <Controller
-                    control={control}
-                    name={`containers.${index}.tareWeightKg`}
-                    render={({ field }) => (
-                      <Input type="number" step="0.01" {...field} />
-                    )}
                   />
                 </Field>
                 <Field
