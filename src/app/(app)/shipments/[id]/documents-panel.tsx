@@ -33,7 +33,7 @@ import {
   DOCUMENT_STAGE_NOTES,
   DOCUMENT_STATUS_BADGE_CLASSES,
   DOCUMENT_TYPE_LABELS,
-  STAGE_DOCUMENT_TYPES,
+  getVisibleDocumentTypes,
 } from "@/lib/document-labels"
 import { formatDateTime } from "@/lib/format"
 
@@ -89,7 +89,10 @@ function StageCard({
   documents: DocumentRow[]
   canManage: boolean
 }) {
-  const types = STAGE_DOCUMENT_TYPES[stage]
+  const types = getVisibleDocumentTypes(
+    stage,
+    documents.map((d) => d.type)
+  )
   const note = DOCUMENT_STAGE_NOTES[stage]
 
   return (
@@ -100,7 +103,11 @@ function StageCard({
           {note && <p className="text-xs text-muted-foreground">{note}</p>}
         </div>
         {canManage && (
-          <UploadDocumentDialog shipmentId={shipmentId} stage={stage} />
+          <UploadDocumentDialog
+            shipmentId={shipmentId}
+            stage={stage}
+            availableTypes={types}
+          />
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -318,9 +325,11 @@ function DocumentViewDialog({ doc }: { doc: DocumentRow }) {
 function UploadDocumentDialog({
   shipmentId,
   stage,
+  availableTypes,
 }: {
   shipmentId: string
   stage: DocumentStage
+  availableTypes: DocumentType[]
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -329,8 +338,6 @@ function UploadDocumentDialog({
   const [file, setFile] = useState<File | null>(null)
   const [comment, setComment] = useState("")
   const [error, setError] = useState<string | null>(null)
-
-  const availableTypes = STAGE_DOCUMENT_TYPES[stage]
 
   const reset = () => {
     setType("")

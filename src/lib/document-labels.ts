@@ -37,6 +37,28 @@ export const DOCUMENT_STAGE_NOTES: Partial<Record<DocumentStage, string>> = {
     "Only one customs declaration type applies per shipment, based on cargo classification.",
 }
 
+// Some stages present mutually-exclusive document type groups: only one
+// group applies to a given shipment (see DOCUMENT_STAGE_NOTES). Once a
+// document exists for a type in one group, the other groups should be
+// hidden for that shipment's stage -- both for the status badges and for
+// what's offered in the upload dialog.
+export const STAGE_TYPE_GROUPS: Partial<Record<DocumentStage, DocumentType[][]>> = {
+  PORT_CLEARANCE: [["CUSTOMS_IM4"], ["CUSTOMS_WH7", "CUSTOMS_T1"]],
+}
+
+export function getVisibleDocumentTypes(
+  stage: DocumentStage,
+  existingTypes: DocumentType[]
+): DocumentType[] {
+  const groups = STAGE_TYPE_GROUPS[stage]
+  if (!groups) return STAGE_DOCUMENT_TYPES[stage]
+
+  const chosenGroup = groups.find((group) =>
+    group.some((t) => existingTypes.includes(t))
+  )
+  return chosenGroup ?? STAGE_DOCUMENT_TYPES[stage]
+}
+
 export const ALLOWED_DOCUMENT_MIME_TYPES = [
   "application/pdf",
   "image/jpeg",
