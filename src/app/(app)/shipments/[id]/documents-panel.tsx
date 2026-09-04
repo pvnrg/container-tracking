@@ -239,7 +239,7 @@ function DocumentViewDialog({ doc }: { doc: DocumentRow }) {
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{doc.fileName}</DialogTitle>
           <DialogDescription>
@@ -280,10 +280,14 @@ function DocumentViewDialog({ doc }: { doc: DocumentRow }) {
               <img
                 src={fileUrl}
                 alt={doc.fileName}
-                className="max-h-[420px] w-full object-contain"
+                className="max-h-[75vh] w-full object-contain"
               />
             ) : isPdf ? (
-              <iframe src={fileUrl} title={doc.fileName} className="h-[420px] w-full" />
+              <iframe
+                src={fileUrl}
+                title={doc.fileName}
+                className="h-[75vh] w-full"
+              />
             ) : (
               <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-muted-foreground">
                 <FileQuestion className="size-8" />
