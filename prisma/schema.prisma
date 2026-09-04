@@ -160,11 +160,12 @@ model Shipment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  containers    Container[]
-  documents     Document[]
-  stageAgents   StageAgent[]
-  notifications Notification[]
-  auditLogs     ShipmentAudit[]
+  containers         Container[]
+  documents          Document[]
+  stageAgents        StageAgent[]
+  roadTransitDetails RoadTransitDetails?
+  notifications      Notification[]
+  auditLogs          ShipmentAudit[]
 
   @@index([blNumber])
   @@index([status])
@@ -280,6 +281,24 @@ model StageAgent {
   updatedAt DateTime @updatedAt
 
   @@unique([shipmentId, stage])
+}
+
+// Road transit dispatch details for Stage 3 (one record per shipment --
+// unlike StageAgent this is specific to the road-transit leg, not a
+// concept that applies across stages).
+model RoadTransitDetails {
+  id         String   @id @default(uuid())
+  shipmentId String   @unique
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  transporterName  String
+  assignmentDate   DateTime?
+  loadingDate      DateTime?
+  truckDetails     String?
+  journeyStartDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // -------------------------------------------------------------

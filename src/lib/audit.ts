@@ -15,6 +15,7 @@ export type AuditAction =
   | "DOCUMENT_DELETED"
   | "TAX_PAYMENT_RECORDED"
   | "STAGE_AGENT_SET"
+  | "ROAD_TRANSIT_DETAILS_SET"
 
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   SHIPMENT_CREATED: "Shipment Created",
@@ -29,6 +30,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   DOCUMENT_DELETED: "Document Deleted",
   TAX_PAYMENT_RECORDED: "Tax Payment Recorded",
   STAGE_AGENT_SET: "Stage Agent Set",
+  ROAD_TRANSIT_DETAILS_SET: "Road Transit Details Set",
 }
 
 /**
@@ -100,6 +102,8 @@ export function describeAuditEntry(entry: {
       return `Tax of ${newV.currency ?? ""} ${newV.amount ?? ""} recorded as paid to ${newV.receivedBy ?? "—"} at ${newV.location ?? "—"} on ${newV.paidAt ?? "—"}.`
     case "STAGE_AGENT_SET":
       return `Agent for ${newV.stageLabel ?? ""} set to ${newV.name ?? ""}${newV.position ? ` (${newV.position})` : ""}, contact ${newV.contact ?? "—"}.`
+    case "ROAD_TRANSIT_DETAILS_SET":
+      return `Road transit details set: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
     default:
       return entry.action
   }

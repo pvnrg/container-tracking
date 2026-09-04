@@ -38,6 +38,10 @@ import {
 import { formatDateTime } from "@/lib/format"
 
 import { deleteDocument, uploadDocument, verifyDocument } from "./documents-actions"
+import {
+  RoadTransitDetailsBlock,
+  type RoadTransitDetailsInfo,
+} from "./road-transit-details"
 import { StageAgentBlock, type StageAgentInfo } from "./stage-agent"
 
 export type DocumentRow = {
@@ -58,11 +62,13 @@ export function DocumentsPanel({
   shipmentId,
   documents,
   stageAgents,
+  roadTransitDetails,
   canManage,
 }: {
   shipmentId: string
   documents: DocumentRow[]
   stageAgents: Partial<Record<DocumentStage, StageAgentInfo>>
+  roadTransitDetails: RoadTransitDetailsInfo | null
   canManage: boolean
 }) {
   return (
@@ -75,6 +81,7 @@ export function DocumentsPanel({
           stage={stage}
           documents={documents.filter((d) => d.stage === stage)}
           agent={stageAgents[stage] ?? null}
+          roadTransitDetails={roadTransitDetails}
           canManage={canManage}
         />
       ))}
@@ -87,12 +94,14 @@ function StageCard({
   stage,
   documents,
   agent,
+  roadTransitDetails,
   canManage,
 }: {
   shipmentId: string
   stage: DocumentStage
   documents: DocumentRow[]
   agent: StageAgentInfo | null
+  roadTransitDetails: RoadTransitDetailsInfo | null
   canManage: boolean
 }) {
   const types = getVisibleDocumentTypes(
@@ -122,6 +131,13 @@ function StageCard({
             shipmentId={shipmentId}
             stage={stage}
             agent={agent}
+            canManage={canManage}
+          />
+        )}
+        {stage === "ROAD_TRANSIT" && (
+          <RoadTransitDetailsBlock
+            shipmentId={shipmentId}
+            details={roadTransitDetails}
             canManage={canManage}
           />
         )}

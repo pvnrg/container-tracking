@@ -53,6 +53,7 @@ export default async function ShipmentDetailPage({
         orderBy: { createdAt: "desc" },
       },
       stageAgents: true,
+      roadTransitDetails: true,
       auditLogs: {
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
@@ -244,6 +245,7 @@ export default async function ShipmentDetailPage({
         shipmentId={shipment.id}
         documents={structuredDocuments}
         stageAgents={stageAgents}
+        roadTransitDetails={shipment.roadTransitDetails}
         canManage={canManageDocuments}
       />
 
