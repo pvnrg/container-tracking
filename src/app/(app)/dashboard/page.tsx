@@ -95,42 +95,49 @@ export default async function DashboardPage() {
       value: total,
       icon: Package,
       classes: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
+      href: "/shipments",
     },
     {
       label: "Active Shipments",
       value: active,
       icon: Activity,
       classes: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
+      href: "/shipments?status=active",
     },
     {
       label: "In-Transit (Ocean)",
       value: inTransit,
       icon: Ship,
       classes: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+      href: "/shipments?status=IN_TRANSIT_SEA",
     },
     {
       label: "At Port of Discharge",
       value: atPort,
       icon: Anchor,
       classes: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      href: "/shipments?status=ARRIVED_PORT_OF_DISCHARGE",
     },
     {
       label: "Completed",
       value: completed,
       icon: CheckCircle2,
       classes: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+      href: "/shipments?status=COMPLETED",
     },
     {
       label: "Overdue ETAs",
       value: overdueEtas,
       icon: AlertTriangle,
       classes: "bg-red-500/10 text-red-700 dark:text-red-400",
+      href: "/shipments?status=overdue",
     },
     {
       label: "Pending Doc. Verifications",
       value: pendingDocVerifications,
       icon: FileClock,
       classes: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      href: "/shipments?status=docs-pending",
     },
   ]
 
@@ -205,24 +212,26 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-semibold">Dashboard</h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {s.label}
-              </CardTitle>
-              <div
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-full",
-                  s.classes
-                )}
-              >
-                <s.icon className="size-4.5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{s.value}</p>
-            </CardContent>
-          </Card>
+          <Link key={s.label} href={s.href}>
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {s.label}
+                </CardTitle>
+                <div
+                  className={cn(
+                    "flex size-9 items-center justify-center rounded-full",
+                    s.classes
+                  )}
+                >
+                  <s.icon className="size-4.5" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{s.value}</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 

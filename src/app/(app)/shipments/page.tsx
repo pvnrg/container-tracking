@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { Plus } from "lucide-react"
+import { Plus, X } from "lucide-react"
+import { Prisma, ShipmentStatus } from "@prisma/client"
 
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/table"
 import { prisma } from "@/lib/prisma"
 import {
+  ARRIVED_OR_LATER_STATUSES,
   DISCHARGE_PORT_LABELS,
   SHIPMENT_STATUS_BADGE_CLASSES,
   SHIPMENT_STATUS_LABELS,
@@ -23,15 +25,48 @@ import {
 
 import { ShipmentEditDialog } from "./shipment-edit-dialog"
 
-export default async function ShipmentsPage() {
+const FILTER_LABELS: Record<string, string> = {
+  active: "Active",
+  overdue: "Overdue ETAs",
+  "docs-pending": "Pending Doc. Verifications",
+  ...SHIPMENT_STATUS_LABELS,
+}
+
+function buildWhere(status: string | undefined): Prisma.ShipmentWhereInput {
+  switch (status) {
+    case "active":
+      return { status: { not: "COMPLETED" } }
+    case "overdue":
+      return {
+        currentEta: { lt: new Date() },
+        status: { notIn: ARRIVED_OR_LATER_STATUSES },
+      }
+    case "docs-pending":
+      return { documents: { some: { isVerified: false } } }
+    case undefined:
+      return {}
+    default:
+      return { status: status as ShipmentStatus }
+  }
+}
+
+export default async function ShipmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const { status } = await searchParams
   const session = await auth()
   const canCreate =
     session?.user.role === "ADMIN" || session?.user.role === "LOGISTICS_OPERATOR"
 
   const shipments = await prisma.shipment.findMany({
+    where: buildWhere(status),
     orderBy: { currentEta: "asc" },
     include: { _count: { select: { containers: true } } },
   })
+
+  const filterLabel = status ? FILTER_LABELS[status] : undefined
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,6 +84,20 @@ export default async function ShipmentsPage() {
           />
         )}
       </div>
+
+      {filterLabel && (
+        <div>
+          <Link href="/shipments">
+            <Badge
+              variant="outline"
+              className="cursor-pointer gap-1 hover:bg-muted/50"
+            >
+              Filtered by: {filterLabel}
+              <X className="size-3" />
+            </Badge>
+          </Link>
+        </div>
+      )}
 
       <div className="rounded-lg border">
         <Table>
@@ -71,11 +120,13 @@ export default async function ShipmentsPage() {
                     illustration={
                       <ContainerStackIllustration className="w-40 opacity-80" />
                     }
-                    title="No shipments yet"
+                    title={filterLabel ? "No matching shipments" : "No shipments yet"}
                     description={
-                      canCreate
-                        ? "Create your first shipment to start tracking it."
-                        : "Shipments will appear here once one is created."
+                      filterLabel
+                        ? `No shipments match "${filterLabel}".`
+                        : canCreate
+                          ? "Create your first shipment to start tracking it."
+                          : "Shipments will appear here once one is created."
                     }
                   />
                 </TableCell>
