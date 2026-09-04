@@ -1,6 +1,6 @@
 import { DocumentStage, DocumentType } from "@prisma/client"
 
-import { DOCUMENT_STAGE_LABELS, DOCUMENT_TYPE_LABELS, STAGE_DOCUMENT_TYPES } from "./document-labels"
+import { STAGE_DOCUMENT_TYPES } from "./document-labels"
 
 // Chronological order documents should land in as a shipment progresses.
 const STAGE_ORDER: DocumentStage[] = [
@@ -9,6 +9,15 @@ const STAGE_ORDER: DocumentStage[] = [
   "ROAD_TRANSIT",
   "FINAL_CLEARANCE",
 ]
+
+// Short form for dashboard chips/one-liners; DOCUMENT_STAGE_LABELS' full
+// "Stage N: ..." text is meant for the shipment page's stage-by-stage view.
+export const STAGE_SHORT_LABELS: Record<DocumentStage, string> = {
+  ENTRY_LEVEL: "Stage 1",
+  PORT_CLEARANCE: "Stage 2",
+  ROAD_TRANSIT: "Stage 3",
+  FINAL_CLEARANCE: "Stage 4",
+}
 
 // Stages where the listed document types are alternatives (only one needs
 // to be verified) rather than all being required -- mirrors the note shown
@@ -68,15 +77,21 @@ export function findStageSkipAlert(
   return { incompleteStage, missingTypes, aheadStages }
 }
 
+// Short "N ahead" chip text, e.g. "Stage 2 ahead" or "Stage 2 & 3 ahead".
+export function stageSkipBadgeLabel(alert: StageSkipAlert): string {
+  const labels = alert.aheadStages.map((s) => STAGE_SHORT_LABELS[s])
+  return `${labels.join(" & ")} ahead`
+}
+
+// One scannable line for the dashboard list; full document-by-document
+// detail lives on the shipment page a click away.
 export function describeStageSkipAlert(alert: StageSkipAlert): string {
-  const incompleteLabel = DOCUMENT_STAGE_LABELS[alert.incompleteStage]
-  const aheadLabel = alert.aheadStages
-    .map((s) => DOCUMENT_STAGE_LABELS[s])
-    .join(", ")
+  const from = STAGE_SHORT_LABELS[alert.incompleteStage]
+  const to = alert.aheadStages.map((s) => STAGE_SHORT_LABELS[s]).join(" & ")
 
-  const missingText = STAGE_REQUIRES_ANY[alert.incompleteStage]
-    ? `no ${alert.missingTypes.map((t) => DOCUMENT_TYPE_LABELS[t]).join(" / ")} verified yet`
-    : `missing ${alert.missingTypes.map((t) => DOCUMENT_TYPE_LABELS[t]).join(", ")}`
+  const progress = STAGE_REQUIRES_ANY[alert.incompleteStage]
+    ? "no declaration verified yet"
+    : `${STAGE_DOCUMENT_TYPES[alert.incompleteStage].length - alert.missingTypes.length}/${STAGE_DOCUMENT_TYPES[alert.incompleteStage].length} verified`
 
-  return `${aheadLabel} document(s) uploaded, but ${incompleteLabel} isn't complete (${missingText}).`
+  return `${from} incomplete (${progress}) — ${to} already has uploads`
 }

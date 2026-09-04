@@ -16,7 +16,14 @@ import {
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { EmptyState } from "@/components/empty-state"
 import { HorizontalBarChart } from "@/components/horizontal-bar-chart"
 import {
@@ -25,7 +32,11 @@ import {
   DetentionRiskLevel,
   getDetentionRisk,
 } from "@/lib/detention"
-import { describeStageSkipAlert, findStageSkipAlert } from "@/lib/document-stage-alerts"
+import {
+  describeStageSkipAlert,
+  findStageSkipAlert,
+  stageSkipBadgeLabel,
+} from "@/lib/document-stage-alerts"
 import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import {
@@ -262,21 +273,32 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card
-        className={cn(
-          stageSkipAlerts.length > 0 && "border-orange-600/30 bg-orange-500/5"
-        )}
-      >
+      <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <FileWarning className="size-4.5 text-orange-600 dark:text-orange-400" />
-            <CardTitle>Document Stage Alerts</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-400">
+              <FileWarning className="size-4.5" />
+            </div>
+            <div>
+              <CardTitle>Document Stage Alerts</CardTitle>
+              <CardDescription>
+                Shipments with later-stage paperwork uploaded ahead of an
+                earlier, incomplete stage
+              </CardDescription>
+            </div>
           </div>
+          {stageSkipAlerts.length > 0 && (
+            <CardAction>
+              <Badge className="bg-orange-600 text-white dark:bg-orange-500">
+                {stageSkipAlerts.length}
+              </Badge>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent>
           {stageSkipAlerts.length === 0 ? (
             <EmptyState
-              icon={FileWarning}
+              icon={CheckCircle2}
               title="No out-of-order paperwork"
               description="Shipments with later-stage documents uploaded before an earlier stage is complete will show up here."
             />
@@ -286,20 +308,20 @@ export default async function DashboardPage() {
                 <Link
                   key={id}
                   href={`/shipments/${id}`}
-                  className="flex flex-col gap-1 rounded-lg border border-orange-600/30 bg-orange-500/10 px-3 py-2 text-sm hover:bg-orange-500/20"
+                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm hover:bg-muted/50"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="font-medium">{blNumber}</span>
-                    <Badge
-                      variant="outline"
-                      className="border-orange-600/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
-                    >
-                      Out of order
-                    </Badge>
+                    <span className="truncate text-muted-foreground">
+                      {describeStageSkipAlert(alert)}
+                    </span>
                   </div>
-                  <span className="text-muted-foreground">
-                    {describeStageSkipAlert(alert)}
-                  </span>
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 border-orange-600/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
+                  >
+                    {stageSkipBadgeLabel(alert)}
+                  </Badge>
                 </Link>
               ))}
             </div>
