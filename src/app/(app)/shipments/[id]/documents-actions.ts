@@ -13,6 +13,7 @@ import {
   MAX_DOCUMENT_SIZE_BYTES,
   STAGE_DOCUMENT_TYPES,
 } from "@/lib/document-labels"
+import { fileContentsMatchDeclaredType } from "@/lib/file-validation"
 import { createNotification } from "@/lib/notifications"
 import { prisma } from "@/lib/prisma"
 import { SHIPMENT_STATUS_LABELS } from "@/lib/shipment-labels"
@@ -74,6 +75,12 @@ export async function uploadDocument(formData: FormData) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
+  if (!(await fileContentsMatchDeclaredType(buffer, file.type))) {
+    throw new Error(
+      "This file's contents don't match its file type. It may be corrupted or mislabeled."
+    )
+  }
+
   const { key } = await saveFile({
     shipmentId: parsed.shipmentId,
     originalName: file.name,
@@ -227,6 +234,12 @@ export async function uploadGeneralDocuments(formData: FormData) {
 
     const title = titles[i]?.trim() || file.name
     const buffer = Buffer.from(await file.arrayBuffer())
+    if (!(await fileContentsMatchDeclaredType(buffer, file.type))) {
+      throw new Error(
+        `"${file.name}"'s contents don't match its file type. It may be corrupted or mislabeled.`
+      )
+    }
+
     const { key } = await saveFile({
       shipmentId,
       originalName: file.name,

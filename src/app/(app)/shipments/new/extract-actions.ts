@@ -4,6 +4,7 @@ import type { BlType, DischargePort } from "@prisma/client"
 
 import { requireRole } from "@/lib/auth-utils"
 import { parseShipmentDocument, type ParsedContainer } from "@/lib/bl-parser"
+import { fileContentsMatchDeclaredType } from "@/lib/file-validation"
 import { extractTextFromPdf, recognizeImageText } from "@/lib/ocr"
 
 const ALLOWED_MIME_TYPES = [
@@ -53,6 +54,11 @@ export async function extractShipmentFromDocument(
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
+  if (!(await fileContentsMatchDeclaredType(buffer, file.type))) {
+    throw new Error(
+      "This file's contents don't match its file type. It may be corrupted or mislabeled."
+    )
+  }
 
   const text =
     file.type === "application/pdf"

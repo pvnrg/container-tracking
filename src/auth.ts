@@ -2,6 +2,11 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 
+import {
+  checkLoginRateLimit,
+  recordFailedLogin,
+  resetLoginAttempts,
+} from "@/lib/login-rate-limit"
 import { prisma } from "@/lib/prisma"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -20,12 +25,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
+        // Same generic null-return path as any other auth failure below --
+        // the login form always shows a generic "Invalid email or
+        // password" message regardless of the reason, so this doesn't
+        // reveal to an attacker that they've specifically been
+        // rate-limited vs. just guessed wrong.
+        const rateLimit = checkLoginRateLimit(email)
+        if (!rateLimit.allowed) {
+          return null
+        }
+
         const user = await prisma.user.findUnique({ where: { email } })
-        if (!user || !user.isActive) return null
+        if (!user || !user.isActive) {
+          recordFailedLogin(email)
+          return null
+        }
 
         const passwordValid = await bcrypt.compare(password, user.password)
-        if (!passwordValid) return null
+        if (!passwordValid) {
+          recordFailedLogin(email)
+          return null
+        }
 
+        resetLoginAttempts(email)
         return {
           id: user.id,
           email: user.email,
