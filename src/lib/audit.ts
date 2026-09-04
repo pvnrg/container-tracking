@@ -16,6 +16,7 @@ export type AuditAction =
   | "TAX_PAYMENT_RECORDED"
   | "STAGE_AGENT_SET"
   | "ROAD_TRANSIT_DETAILS_SET"
+  | "STATUS_AUTO_UPDATED"
 
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   SHIPMENT_CREATED: "Shipment Created",
@@ -31,6 +32,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   TAX_PAYMENT_RECORDED: "Tax Payment Recorded",
   STAGE_AGENT_SET: "Stage Agent Set",
   ROAD_TRANSIT_DETAILS_SET: "Road Transit Details Set",
+  STATUS_AUTO_UPDATED: "Status Auto-Updated",
 }
 
 /**
@@ -104,6 +106,8 @@ export function describeAuditEntry(entry: {
       return `Agent for ${newV.stageLabel ?? ""} set to ${newV.name ?? ""}${newV.position ? ` (${newV.position})` : ""}, contact ${newV.contact ?? "—"}.`
     case "ROAD_TRANSIT_DETAILS_SET":
       return `Road transit details set: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
+    case "STATUS_AUTO_UPDATED":
+      return `Status auto-updated from "${oldV.status ?? "—"}" to "${newV.status ?? "—"}" after ${newV.stageLabel ?? "a stage"}'s documents were verified.`
     default:
       return entry.action
   }

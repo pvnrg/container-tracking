@@ -185,8 +185,12 @@ function DocumentRowItem({
   const handleVerify = async () => {
     setIsBusy(true)
     try {
-      await verifyDocument(doc.id)
-      toast.success("Document verified")
+      const { autoAdvancedTo } = await verifyDocument(doc.id)
+      toast.success(
+        autoAdvancedTo
+          ? `Document verified — shipment status advanced to ${autoAdvancedTo}`
+          : "Document verified"
+      )
       router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to verify document")

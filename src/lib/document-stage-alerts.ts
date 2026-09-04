@@ -26,9 +26,9 @@ const STAGE_REQUIRES_ANY: Partial<Record<DocumentStage, boolean>> = {
   PORT_CLEARANCE: true,
 }
 
-type StageDoc = { stage: DocumentStage; type: DocumentType; isVerified: boolean }
+export type StageDoc = { stage: DocumentStage; type: DocumentType; isVerified: boolean }
 
-function isStageComplete(stage: DocumentStage, docs: StageDoc[]) {
+export function isStageComplete(stage: DocumentStage, docs: StageDoc[]) {
   const types = STAGE_DOCUMENT_TYPES[stage]
   const verifiedTypes = new Set(docs.filter((d) => d.isVerified).map((d) => d.type))
   return STAGE_REQUIRES_ANY[stage]

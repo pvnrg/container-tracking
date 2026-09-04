@@ -15,6 +15,8 @@ import {
 } from "@/lib/document-labels"
 import { createNotification } from "@/lib/notifications"
 import { prisma } from "@/lib/prisma"
+import { SHIPMENT_STATUS_LABELS } from "@/lib/shipment-labels"
+import { maybeAutoAdvanceStatus } from "@/lib/shipment-status-auto"
 import { deleteFile, saveFile } from "@/lib/storage"
 
 const uploadSchema = z
@@ -147,7 +149,24 @@ export async function verifyDocument(documentId: string) {
     })
   }
 
+  let autoAdvancedTo: string | null = null
+  if (doc.stage) {
+    const newStatus = await maybeAutoAdvanceStatus({
+      shipmentId: doc.shipmentId,
+      stage: doc.stage,
+      userId: session.user.id,
+    })
+    if (newStatus) {
+      autoAdvancedTo = SHIPMENT_STATUS_LABELS[newStatus]
+      revalidatePath("/shipments")
+      revalidatePath("/shipments/tracking")
+      revalidatePath("/shipments/detention")
+      revalidatePath("/dashboard")
+    }
+  }
+
   revalidatePath(`/shipments/${doc.shipmentId}`)
+  return { autoAdvancedTo }
 }
 
 export async function deleteDocument(documentId: string) {

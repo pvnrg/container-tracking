@@ -6,6 +6,7 @@ import { RwandanDestination, ShipmentStatus } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { ensureDetentionTrackers } from "@/lib/detention-trackers"
 import { STAGE_DOCUMENT_TYPES } from "@/lib/document-labels"
 import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
@@ -26,8 +27,6 @@ const updateSchema = z.object({
   transitArrivalEta: z.string().optional(),
   destinationWarehouse: z.nativeEnum(RwandanDestination).optional(),
 })
-
-const DETENTION_FREE_TIME_DAYS = 30
 
 export async function updateShipmentTracking(input: {
   shipmentId: string
@@ -117,38 +116,7 @@ export async function updateShipmentTracking(input: {
   }
 
   if (ARRIVED_OR_LATER_STATUSES.includes(parsed.status)) {
-    const containers = await prisma.container.findMany({
-      where: { shipmentId: parsed.shipmentId },
-      include: { detentionTracker: true },
-    })
-
-    for (const container of containers) {
-      if (container.detentionTracker) continue
-
-      const now = new Date()
-      const deadlineDate = new Date(
-        now.getTime() + DETENTION_FREE_TIME_DAYS * 24 * 60 * 60 * 1000
-      )
-
-      await prisma.$transaction([
-        prisma.detentionTracker.create({
-          data: {
-            containerId: container.id,
-            freeTimeDays: DETENTION_FREE_TIME_DAYS,
-            clockStartDate: now,
-            deadlineDate,
-          },
-        }),
-        prisma.container.update({
-          where: { id: container.id },
-          data: {
-            status:
-              container.status === "ON_VESSEL" ? "DISCHARGED_AT_PORT" : undefined,
-          },
-        }),
-      ])
-    }
-
+    await ensureDetentionTrackers(parsed.shipmentId)
     revalidatePath("/shipments/detention")
   }
 
