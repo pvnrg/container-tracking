@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -123,7 +124,13 @@ export function ShipmentForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Bill of Lading Details</CardTitle>
+          <CardTitle className="flex items-center gap-2.5">
+            <StepBadge step={1} />
+            Bill of Lading Details
+          </CardTitle>
+          <CardDescription>
+            Core shipment info, routing, and the parties involved.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="BL Number" error={errors.blNumber?.message} required>
@@ -236,8 +243,16 @@ export function ShipmentForm() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Containers</CardTitle>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2.5">
+              <StepBadge step={2} />
+              Containers
+            </CardTitle>
+            <CardDescription>
+              Add one entry per container on this shipment.
+            </CardDescription>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -258,7 +273,10 @@ export function ShipmentForm() {
             <div key={field.id}>
               {index > 0 && <Separator className="mb-4" />}
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">
+                <h3 className="flex items-center gap-2 text-sm font-medium">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                    {index + 1}
+                  </span>
                   Container {index + 1}
                 </h3>
                 {fields.length > 1 && (
@@ -364,6 +382,14 @@ export function ShipmentForm() {
         </Button>
       </div>
     </form>
+  )
+}
+
+function StepBadge({ step }: { step: number }) {
+  return (
+    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+      {step}
+    </span>
   )
 }
 

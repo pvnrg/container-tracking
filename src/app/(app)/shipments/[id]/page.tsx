@@ -1,10 +1,14 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { DocumentStage, DocumentType } from "@prisma/client"
+import { ArrowLeft, CalendarClock, Container, MapPinned, Users } from "lucide-react"
 
 import { auth } from "@/auth"
 import { AUDIT_ACTION_LABELS, describeAuditEntry } from "@/lib/audit"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmptyState } from "@/components/empty-state"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -86,54 +90,87 @@ export default async function ShipmentDetailPage({
   )
   const generalDocuments = shipment.documents.filter((d) => d.stage === null)
 
-  const details: [string, React.ReactNode][] = [
-    ["BL Type", BL_TYPE_LABELS[shipment.blType]],
-    ["Shipping Line", shipment.shippingLine],
-    ["Origin", [shipment.originPort, shipment.originCountry].filter(Boolean).join(", ")],
-    ["Discharge Port", DISCHARGE_PORT_LABELS[shipment.dischargePort]],
-    [
-      "Destination Warehouse",
-      shipment.destinationWarehouse
-        ? DESTINATION_WAREHOUSE_LABELS[shipment.destinationWarehouse]
-        : "Not yet allocated",
-    ],
-    ["Shipper", shipment.shipperName ?? "—"],
-    ["Consignee", shipment.consigneeName ?? "—"],
-    ["Notify Party", shipment.notifyParty ?? "—"],
-    ["Current ETA", shipment.currentEta.toLocaleDateString()],
-    [
-      "Arrived at Port",
-      shipment.actualDischargeDate
-        ? formatDateTime(shipment.actualDischargeDate)
-        : "—",
-    ],
-    [
-      "Transit Started",
-      shipment.transitStartedAt ? formatDateTime(shipment.transitStartedAt) : "—",
-    ],
-    [
-      "Transit Expected Arrival",
-      shipment.transitArrivalEta
-        ? formatDateTime(shipment.transitArrivalEta)
-        : "—",
-    ],
-    ["Created By", shipment.createdBy.name],
-    [
-      "Transporter",
-      canManageDocuments ? (
-        <TransporterAssign
-          shipmentId={shipment.id}
-          currentTransporterId={shipment.transporterId}
-          transporters={transporters}
-        />
-      ) : (
-        (shipment.transporter?.name ?? "Not yet assigned")
-      ),
-    ],
+  const detailGroups: {
+    heading: string
+    icon: typeof MapPinned
+    fields: [string, React.ReactNode][]
+  }[] = [
+    {
+      heading: "Route & Cargo",
+      icon: MapPinned,
+      fields: [
+        ["BL Type", BL_TYPE_LABELS[shipment.blType]],
+        ["Shipping Line", shipment.shippingLine],
+        [
+          "Origin",
+          [shipment.originPort, shipment.originCountry].filter(Boolean).join(", "),
+        ],
+        ["Discharge Port", DISCHARGE_PORT_LABELS[shipment.dischargePort]],
+        [
+          "Destination Warehouse",
+          shipment.destinationWarehouse
+            ? DESTINATION_WAREHOUSE_LABELS[shipment.destinationWarehouse]
+            : "Not yet allocated",
+        ],
+      ],
+    },
+    {
+      heading: "Parties",
+      icon: Users,
+      fields: [
+        ["Shipper", shipment.shipperName ?? "—"],
+        ["Consignee", shipment.consigneeName ?? "—"],
+        ["Notify Party", shipment.notifyParty ?? "—"],
+        ["Created By", shipment.createdBy.name],
+        [
+          "Transporter",
+          canManageDocuments ? (
+            <TransporterAssign
+              shipmentId={shipment.id}
+              currentTransporterId={shipment.transporterId}
+              transporters={transporters}
+            />
+          ) : (
+            (shipment.transporter?.name ?? "Not yet assigned")
+          ),
+        ],
+      ],
+    },
+    {
+      heading: "Timeline",
+      icon: CalendarClock,
+      fields: [
+        ["Current ETA", shipment.currentEta.toLocaleDateString()],
+        [
+          "Arrived at Port",
+          shipment.actualDischargeDate
+            ? formatDateTime(shipment.actualDischargeDate)
+            : "—",
+        ],
+        [
+          "Transit Started",
+          shipment.transitStartedAt ? formatDateTime(shipment.transitStartedAt) : "—",
+        ],
+        [
+          "Transit Expected Arrival",
+          shipment.transitArrivalEta
+            ? formatDateTime(shipment.transitArrivalEta)
+            : "—",
+        ],
+      ],
+    },
   ]
 
   return (
     <div className="flex flex-col gap-6">
+      <Link
+        href="/shipments"
+        className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-3.5" />
+        Back to Shipments
+      </Link>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{shipment.blNumber}</h1>
@@ -177,11 +214,22 @@ export default async function ShipmentDetailPage({
         <CardHeader>
           <CardTitle>Shipment Details</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-          {details.map(([label, value]) => (
-            <div key={label} className="flex flex-col gap-0.5">
-              <span className="text-xs text-muted-foreground">{label}</span>
-              <span className="text-sm">{value}</span>
+        <CardContent className="flex flex-col gap-5">
+          {detailGroups.map((group, i) => (
+            <div key={group.heading}>
+              {i > 0 && <Separator className="mb-5" />}
+              <h3 className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                <group.icon className="size-3.5" />
+                {group.heading}
+              </h3>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+                {group.fields.map(([label, value]) => (
+                  <div key={label} className="flex flex-col gap-0.5">
+                    <span className="text-xs text-muted-foreground">{label}</span>
+                    <span className="text-sm">{value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </CardContent>
@@ -189,7 +237,10 @@ export default async function ShipmentDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Containers</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Container className="size-4.5 text-muted-foreground" />
+            Containers ({shipment.containers.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -261,9 +312,11 @@ export default async function ShipmentDetailPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {shipment.auditLogs.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No activity recorded yet.
-            </p>
+            <EmptyState
+              icon={CalendarClock}
+              title="No activity recorded yet"
+              description="Status changes, uploads, and other updates will show up here."
+            />
           )}
           {shipment.auditLogs.map((entry) => (
             <div
