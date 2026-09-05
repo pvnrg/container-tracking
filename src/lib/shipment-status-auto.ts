@@ -83,11 +83,20 @@ export async function maybeAutoAdvanceStatus({
 
   const extra: { transitStartedAt?: Date; isLoadedOnTruck?: boolean } = {}
   if (furthestEligible === "LOADED_ROAD_TRANSIT") {
-    const transitDetails = await prisma.roadTransitDetails.findUnique({
+    // Each container now has its own transit details -- use the earliest
+    // recorded journey start across the shipment's containers, since that's
+    // when the shipment's road leg actually began.
+    const containers = await prisma.container.findMany({
       where: { shipmentId },
-      select: { journeyStartDate: true },
+      select: { transitDetails: { select: { journeyStartDate: true } } },
     })
-    extra.transitStartedAt = transitDetails?.journeyStartDate ?? new Date()
+    const journeyStartDates = containers
+      .map((c) => c.transitDetails?.journeyStartDate)
+      .filter((d): d is Date => d != null)
+    extra.transitStartedAt =
+      journeyStartDates.length > 0
+        ? new Date(Math.min(...journeyStartDates.map((d) => d.getTime())))
+        : new Date()
     extra.isLoadedOnTruck = true
   }
 

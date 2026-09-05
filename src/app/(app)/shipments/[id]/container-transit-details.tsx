@@ -18,96 +18,93 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { formatDate } from "@/lib/format"
 
-import { upsertRoadTransitDetails } from "./road-transit-actions"
+import { upsertContainerTransitDetails } from "./container-transit-actions"
 
-export type RoadTransitDetailsInfo = {
+export type ContainerTransitDetailsInfo = {
   transporterName: string
   assignmentDate: Date | null
   loadingDate: Date | null
   truckDetails: string | null
+  driverDetails: string | null
   journeyStartDate: Date | null
+}
+
+export type ContainerForTransit = {
+  id: string
+  containerNumber: string
 }
 
 function toDateInputValue(date: Date | null) {
   return date ? date.toISOString().slice(0, 10) : ""
 }
 
-export function RoadTransitDetailsBlock({
-  shipmentId,
-  details,
+export function ContainerTransitDetailsBlock({
+  containers,
+  detailsByContainerId,
   canManage,
 }: {
-  shipmentId: string
-  details: RoadTransitDetailsInfo | null
+  containers: ContainerForTransit[]
+  detailsByContainerId: Record<string, ContainerTransitDetailsInfo>
   canManage: boolean
 }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 font-medium">
-          <Truck className="size-4 text-muted-foreground" />
-          Transit Details
-        </span>
-        {canManage && (
-          <TransitDetailsDialog shipmentId={shipmentId} details={details} />
+      <span className="flex items-center gap-2 font-medium">
+        <Truck className="size-4 text-muted-foreground" />
+        Transit Details
+      </span>
+
+      <div className="flex flex-col gap-2">
+        {containers.map((container) => (
+          <ContainerTransitRow
+            key={container.id}
+            container={container}
+            details={detailsByContainerId[container.id] ?? null}
+            canManage={canManage}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ContainerTransitRow({
+  container,
+  details,
+  canManage,
+}: {
+  container: ContainerForTransit
+  details: ContainerTransitDetailsInfo | null
+  canManage: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-md border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="font-medium">{container.containerNumber}</span>
+        {details ? (
+          <span className="truncate text-xs text-muted-foreground">
+            {details.transporterName}
+            {details.truckDetails ? ` · ${details.truckDetails}` : ""}
+            {details.driverDetails ? ` · ${details.driverDetails}` : ""}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">Not added yet</span>
         )}
       </div>
-
-      {details ? (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-          <Field label="Transporter" value={details.transporterName} />
-          <Field
-            label="Assignment Date"
-            value={details.assignmentDate ? formatDate(details.assignmentDate) : "—"}
-          />
-          <Field
-            label="Loading Date"
-            value={details.loadingDate ? formatDate(details.loadingDate) : "—"}
-          />
-          <Field
-            label="Journey Start"
-            value={
-              details.journeyStartDate ? formatDate(details.journeyStartDate) : "—"
-            }
-          />
-          <Field
-            label="Truck Details"
-            value={details.truckDetails ?? "—"}
-            className="col-span-2 sm:col-span-3"
-          />
-        </div>
-      ) : (
-        <p className="text-muted-foreground">No transit details recorded yet</p>
+      {canManage && (
+        <TransitDetailsDialog container={container} details={details} />
       )}
     </div>
   )
 }
 
-function Field({
-  label,
-  value,
-  className,
-}: {
-  label: string
-  value: string
-  className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-0.5 ${className ?? ""}`}>
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span>{value}</span>
-    </div>
-  )
-}
-
 function TransitDetailsDialog({
-  shipmentId,
+  container,
   details,
 }: {
-  shipmentId: string
-  details: RoadTransitDetailsInfo | null
+  container: ContainerForTransit
+  details: ContainerTransitDetailsInfo | null
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -124,6 +121,7 @@ function TransitDetailsDialog({
     toDateInputValue(details?.loadingDate ?? null)
   )
   const [truckDetails, setTruckDetails] = useState(details?.truckDetails ?? "")
+  const [driverDetails, setDriverDetails] = useState(details?.driverDetails ?? "")
   const [journeyStartDate, setJourneyStartDate] = useState(
     toDateInputValue(details?.journeyStartDate ?? null)
   )
@@ -133,6 +131,7 @@ function TransitDetailsDialog({
     setAssignmentDate(toDateInputValue(details?.assignmentDate ?? null))
     setLoadingDate(toDateInputValue(details?.loadingDate ?? null))
     setTruckDetails(details?.truckDetails ?? "")
+    setDriverDetails(details?.driverDetails ?? "")
     setJourneyStartDate(toDateInputValue(details?.journeyStartDate ?? null))
     setError(null)
   }
@@ -145,12 +144,13 @@ function TransitDetailsDialog({
     }
     setIsSaving(true)
     try {
-      await upsertRoadTransitDetails({
-        shipmentId,
+      await upsertContainerTransitDetails({
+        containerId: container.id,
         transporterName: transporterName.trim(),
         assignmentDate: assignmentDate || undefined,
         loadingDate: loadingDate || undefined,
         truckDetails: truckDetails.trim() || undefined,
+        driverDetails: driverDetails.trim() || undefined,
         journeyStartDate: journeyStartDate || undefined,
       })
       toast.success("Transit details saved")
@@ -181,10 +181,10 @@ function TransitDetailsDialog({
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Road Transit Details</DialogTitle>
+          <DialogTitle>Transit Details — {container.containerNumber}</DialogTitle>
           <DialogDescription>
-            Record the transporter and dispatch schedule for this shipment&apos;s
-            road leg.
+            Record the transporter, truck, and driver assigned to this
+            container&apos;s road leg.
           </DialogDescription>
         </DialogHeader>
 
@@ -199,7 +199,7 @@ function TransitDetailsDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label>Shipment Assignment Date</Label>
+              <Label>Assignment Date</Label>
               <Input
                 type="date"
                 value={assignmentDate}
@@ -226,9 +226,17 @@ function TransitDetailsDialog({
           <div className="flex flex-col gap-1.5">
             <Label>Truck Details</Label>
             <Textarea
-              placeholder="Plate number, driver name, vehicle type..."
+              placeholder="Plate number, vehicle type..."
               value={truckDetails}
               onChange={(e) => setTruckDetails(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Driver Details</Label>
+            <Textarea
+              placeholder="Driver name, phone number..."
+              value={driverDetails}
+              onChange={(e) => setDriverDetails(e.target.value)}
             />
           </div>
 

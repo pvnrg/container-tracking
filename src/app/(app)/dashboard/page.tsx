@@ -5,6 +5,7 @@ import {
   Anchor,
   CheckCircle2,
   CircleCheck,
+  ClipboardList,
   FileClock,
   FileWarning,
   Flame,
@@ -43,6 +44,7 @@ import {
   ARRIVED_OR_LATER_STATUSES,
   DISCHARGE_PORT_LABELS,
 } from "@/lib/shipment-labels"
+import { getStage2Gaps, STAGE2_GAP_LABELS } from "@/lib/stage2-readiness"
 import { cn } from "@/lib/utils"
 
 function daysUntil(date: Date) {
@@ -262,6 +264,36 @@ export default async function DashboardPage() {
     })
     .filter((a): a is { id: string; blNumber: string; alert: NonNullable<ReturnType<typeof findStageSkipAlert>> } => a !== null)
 
+  const arrivedShipments = await prisma.shipment.findMany({
+    where: { status: "ARRIVED_PORT_OF_DISCHARGE" },
+    select: {
+      id: true,
+      blNumber: true,
+      stageAgents: { where: { stage: "PORT_CLEARANCE" }, select: { id: true } },
+      documents: {
+        where: { stage: "PORT_CLEARANCE" },
+        select: { id: true },
+      },
+      containers: {
+        select: { transitDetails: { select: { id: true } } },
+      },
+    },
+  })
+
+  const stage2Alerts = arrivedShipments
+    .map((s) => ({
+      id: s.id,
+      blNumber: s.blNumber,
+      gaps: getStage2Gaps({
+        hasAgent: s.stageAgents.length > 0,
+        hasCustomsDocument: s.documents.length > 0,
+        allContainersHaveTransitDetails: s.containers.every(
+          (c) => c.transitDetails !== null
+        ),
+      }),
+    }))
+    .filter((s) => s.gaps.length > 0)
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
@@ -359,6 +391,62 @@ export default async function DashboardPage() {
                   >
                     {stageSkipBadgeLabel(alert)}
                   </Badge>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-400">
+              <ClipboardList className="size-4.5" />
+            </div>
+            <div>
+              <CardTitle>Arrived — Stage 2 Details Needed</CardTitle>
+              <CardDescription>
+                Shipments at the discharge port still missing a clearing
+                agent, customs declaration, or container transit details
+              </CardDescription>
+            </div>
+          </div>
+          {stage2Alerts.length > 0 && (
+            <CardAction>
+              <Badge className="bg-sky-600 text-white dark:bg-sky-500">
+                {stage2Alerts.length}
+              </Badge>
+            </CardAction>
+          )}
+        </CardHeader>
+        <CardContent>
+          {stage2Alerts.length === 0 ? (
+            <EmptyState
+              icon={CheckCircle2}
+              title="Nothing outstanding"
+              description="Shipments that arrive without Stage 2 details recorded yet will show up here."
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {stage2Alerts.map(({ id, blNumber, gaps }) => (
+                <Link
+                  key={id}
+                  href={`/shipments/${id}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm hover:bg-muted/50"
+                >
+                  <span className="font-medium">{blNumber}</span>
+                  <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                    {gaps.map((gap) => (
+                      <Badge
+                        key={gap}
+                        variant="outline"
+                        className="border-sky-600/30 bg-sky-500/10 text-sky-700 dark:text-sky-400"
+                      >
+                        {STAGE2_GAP_LABELS[gap]}
+                      </Badge>
+                    ))}
+                  </div>
                 </Link>
               ))}
             </div>

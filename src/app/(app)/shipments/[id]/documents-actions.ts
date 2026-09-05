@@ -26,6 +26,7 @@ const uploadSchema = z
     stage: z.nativeEnum(DocumentStage),
     type: z.nativeEnum(DocumentType),
     comment: z.string().optional(),
+    referenceNumber: z.string().optional(),
   })
   .refine((v) => STAGE_DOCUMENT_TYPES[v.stage].includes(v.type), {
     message: "Selected document type does not belong to the selected stage",
@@ -40,6 +41,7 @@ export async function uploadDocument(formData: FormData) {
     stage: formData.get("stage"),
     type: formData.get("type"),
     comment: formData.get("comment") ?? undefined,
+    referenceNumber: formData.get("referenceNumber") ?? undefined,
   })
 
   const file = formData.get("file")
@@ -88,6 +90,7 @@ export async function uploadDocument(formData: FormData) {
   })
 
   const comment = parsed.comment?.trim() || null
+  const referenceNumber = parsed.referenceNumber?.trim() || null
 
   await prisma.document.create({
     data: {
@@ -95,6 +98,7 @@ export async function uploadDocument(formData: FormData) {
       stage: parsed.stage,
       type: parsed.type,
       comment,
+      referenceNumber,
       fileUrl: key,
       fileName: file.name,
       fileSize: file.size,
@@ -111,6 +115,7 @@ export async function uploadDocument(formData: FormData) {
       fileName: file.name,
       type: DOCUMENT_TYPE_LABELS[parsed.type],
       comment: comment ?? undefined,
+      referenceNumber: referenceNumber ?? undefined,
     },
   })
 

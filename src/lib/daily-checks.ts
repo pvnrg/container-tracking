@@ -16,7 +16,19 @@ async function runEtaArrivalAutoAdvance() {
       status: "IN_TRANSIT_SEA",
       currentEta: { lte: new Date() },
     },
-    select: { id: true, currentEta: true },
+    select: { id: true, blNumber: true, currentEta: true },
+  })
+
+  if (dueShipments.length === 0) {
+    return { shipmentsAdvanced: 0 }
+  }
+
+  // Arriving means Stage 2 (Discharge Port Customs) needs attention right
+  // away -- clearing agent, customs declaration, transit details -- so the
+  // people who manage that get told as soon as the cron makes the change.
+  const clearanceUsers = await prisma.user.findMany({
+    where: { isActive: true, role: { in: ["ADMIN", "LOGISTICS_OPERATOR"] } },
+    select: { id: true },
   })
 
   for (const shipment of dueShipments) {
@@ -39,6 +51,15 @@ async function runEtaArrivalAutoAdvance() {
     })
 
     await ensureDetentionTrackers(shipment.id)
+
+    for (const user of clearanceUsers) {
+      await createNotification({
+        userId: user.id,
+        shipmentId: shipment.id,
+        title: "Arrived at Port of Discharge",
+        message: `Shipment ${shipment.blNumber} has arrived at the discharge port. Add the Stage 2 clearing agent, transit details, and customs declaration.`,
+      })
+    }
   }
 
   return { shipmentsAdvanced: dueShipments.length }

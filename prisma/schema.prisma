@@ -160,12 +160,11 @@ model Shipment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  containers         Container[]
-  documents          Document[]
-  stageAgents        StageAgent[]
-  roadTransitDetails RoadTransitDetails?
-  notifications      Notification[]
-  auditLogs          ShipmentAudit[]
+  containers    Container[]
+  documents     Document[]
+  stageAgents   StageAgent[]
+  notifications Notification[]
+  auditLogs     ShipmentAudit[]
 
   @@index([blNumber])
   @@index([status])
@@ -199,6 +198,7 @@ model Container {
   updatedAt DateTime @updatedAt
 
   detentionTracker DetentionTracker?
+  transitDetails   ContainerTransitDetails?
 
   @@unique([shipmentId, containerNumber])
   @@index([containerNumber])
@@ -251,6 +251,10 @@ model Document {
   fileSize Int
   mimeType String
 
+  // WH7/T1/IM4 declaration number -- only meaningful for those document
+  // types, set at upload time alongside the file itself.
+  referenceNumber String?
+
   isVerified Boolean   @default(false)
   verifiedAt DateTime?
 
@@ -283,18 +287,19 @@ model StageAgent {
   @@unique([shipmentId, stage])
 }
 
-// Road transit dispatch details for Stage 3 (one record per shipment --
-// unlike StageAgent this is specific to the road-transit leg, not a
-// concept that applies across stages).
-model RoadTransitDetails {
-  id         String   @id @default(uuid())
-  shipmentId String   @unique
-  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+// Road transit dispatch details for Stage 2 (one record per container --
+// different containers on the same shipment can go out on different
+// trucks/drivers, so this is keyed off Container, not Shipment).
+model ContainerTransitDetails {
+  id          String    @id @default(uuid())
+  containerId String    @unique
+  container   Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
 
   transporterName  String
   assignmentDate   DateTime?
   loadingDate      DateTime?
   truckDetails     String?
+  driverDetails    String?
   journeyStartDate DateTime?
 
   createdAt DateTime @default(now())

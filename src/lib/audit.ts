@@ -95,7 +95,7 @@ export function describeAuditEntry(entry: {
     case "CONTAINER_RETURNED_TO_DEPOT":
       return `Container ${newV.containerNumber ?? ""} returned to depot on ${newV.returnedToDepotDate ?? ""}.`
     case "DOCUMENT_UPLOADED":
-      return `Uploaded "${newV.fileName ?? ""}" (${newV.type ?? newV.title ?? "General"}).${newV.comment ? ` Comment: "${newV.comment}"` : ""}`
+      return `Uploaded "${newV.fileName ?? ""}" (${newV.type ?? newV.title ?? "General"}).${newV.referenceNumber ? ` No. ${newV.referenceNumber}.` : ""}${newV.comment ? ` Comment: "${newV.comment}"` : ""}`
     case "DOCUMENT_VERIFIED":
       return `Verified "${newV.fileName ?? ""}".`
     case "DOCUMENT_DELETED":
@@ -105,7 +105,7 @@ export function describeAuditEntry(entry: {
     case "STAGE_AGENT_SET":
       return `Agent for ${newV.stageLabel ?? ""} set to ${newV.name ?? ""}${newV.position ? ` (${newV.position})` : ""}, contact ${newV.contact ?? "—"}.`
     case "ROAD_TRANSIT_DETAILS_SET":
-      return `Road transit details set: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
+      return `Transit details set for container ${newV.containerNumber ?? "—"}: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, driver ${newV.driverDetails ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
     case "STATUS_AUTO_UPDATED": {
       const trigger = newV.stageLabel
         ? `after ${newV.stageLabel}'s documents were verified`

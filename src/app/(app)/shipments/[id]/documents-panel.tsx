@@ -54,11 +54,12 @@ import {
 import { formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { deleteDocument, uploadDocument, verifyDocument } from "./documents-actions"
 import {
-  RoadTransitDetailsBlock,
-  type RoadTransitDetailsInfo,
-} from "./road-transit-details"
+  ContainerTransitDetailsBlock,
+  type ContainerForTransit,
+  type ContainerTransitDetailsInfo,
+} from "./container-transit-details"
+import { deleteDocument, uploadDocument, verifyDocument } from "./documents-actions"
 import { StageAgentBlock, type StageAgentInfo } from "./stage-agent"
 
 export type DocumentRow = {
@@ -71,9 +72,16 @@ export type DocumentRow = {
   isVerified: boolean
   verifiedAt: Date | null
   comment: string | null
+  referenceNumber: string | null
   createdAt: Date
   uploadedBy: { name: string }
 }
+
+const CUSTOMS_DECLARATION_TYPES: DocumentType[] = [
+  "CUSTOMS_WH7",
+  "CUSTOMS_T1",
+  "CUSTOMS_IM4",
+]
 
 type StageStatus = "complete" | "partial" | "pending"
 
@@ -122,13 +130,15 @@ export function DocumentsPanel({
   shipmentId,
   documents,
   stageAgents,
-  roadTransitDetails,
+  containers,
+  transitDetailsByContainerId,
   canManage,
 }: {
   shipmentId: string
   documents: DocumentRow[]
   stageAgents: Partial<Record<DocumentStage, StageAgentInfo>>
-  roadTransitDetails: RoadTransitDetailsInfo | null
+  containers: ContainerForTransit[]
+  transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
   canManage: boolean
 }) {
   const stages = Object.values(DocumentStage)
@@ -168,7 +178,8 @@ export function DocumentsPanel({
           stage={stage}
           allDocuments={documents}
           agent={stageAgents[stage] ?? null}
-          roadTransitDetails={roadTransitDetails}
+          containers={containers}
+          transitDetailsByContainerId={transitDetailsByContainerId}
           canManage={canManage}
         />
       ))}
@@ -181,14 +192,16 @@ function StageCard({
   stage,
   allDocuments,
   agent,
-  roadTransitDetails,
+  containers,
+  transitDetailsByContainerId,
   canManage,
 }: {
   shipmentId: string
   stage: DocumentStage
   allDocuments: DocumentRow[]
   agent: StageAgentInfo | null
-  roadTransitDetails: RoadTransitDetailsInfo | null
+  containers: ContainerForTransit[]
+  transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
   canManage: boolean
 }) {
   const documents = allDocuments.filter((d) => d.stage === stage)
@@ -240,10 +253,10 @@ function StageCard({
               canManage={canManage}
             />
           )}
-          {stage === "ROAD_TRANSIT" && (
-            <RoadTransitDetailsBlock
-              shipmentId={shipmentId}
-              details={roadTransitDetails}
+          {stage === "PORT_CLEARANCE" && (
+            <ContainerTransitDetailsBlock
+              containers={containers}
+              detailsByContainerId={transitDetailsByContainerId}
               canManage={canManage}
             />
           )}
@@ -346,7 +359,15 @@ function DocumentRowItem({
           <FileIcon className="size-4" />
         </div>
         <div className="flex min-w-0 flex-col">
-          <span className="font-medium">{DOCUMENT_TYPE_LABELS[doc.type]}</span>
+          <span className="font-medium">
+            {DOCUMENT_TYPE_LABELS[doc.type]}
+            {doc.referenceNumber && (
+              <span className="font-normal text-muted-foreground">
+                {" "}
+                · No. {doc.referenceNumber}
+              </span>
+            )}
+          </span>
           <span className="truncate text-xs text-muted-foreground">
             {doc.fileName} · {(doc.fileSize / 1024).toFixed(0)} KB · Uploaded by{" "}
             {doc.uploadedBy.name}
@@ -503,12 +524,14 @@ function UploadDocumentDialog({
   const [type, setType] = useState<DocumentType | "">("")
   const [file, setFile] = useState<File | null>(null)
   const [comment, setComment] = useState("")
+  const [referenceNumber, setReferenceNumber] = useState("")
   const [error, setError] = useState<string | null>(null)
 
   const reset = () => {
     setType("")
     setFile(null)
     setComment("")
+    setReferenceNumber("")
     setError(null)
   }
 
@@ -527,6 +550,9 @@ function UploadDocumentDialog({
       formData.set("file", file)
       if (comment.trim()) {
         formData.set("comment", comment.trim())
+      }
+      if (referenceNumber.trim()) {
+        formData.set("referenceNumber", referenceNumber.trim())
       }
       await uploadDocument(formData)
       toast.success("Document uploaded")
@@ -587,6 +613,17 @@ function UploadDocumentDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {type && CUSTOMS_DECLARATION_TYPES.includes(type) && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Document Number</Label>
+              <Input
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
+                placeholder="e.g. the declaration's WH7/T1/IM4 number"
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label>File</Label>

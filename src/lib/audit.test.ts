@@ -61,6 +61,24 @@ describe("describeAuditEntry", () => {
     ).toBe('Deleted "invoice.pdf".')
   })
 
+  it("describes container transit details being set", () => {
+    expect(
+      describeAuditEntry({
+        action: "ROAD_TRANSIT_DETAILS_SET",
+        oldValue: null,
+        newValue: {
+          containerNumber: "MEDU1234567",
+          transporterName: "ABC Logistics Ltd",
+          truckDetails: "Plate RAD 123A",
+          driverDetails: "John Doe, +250700000000",
+          journeyStartDate: "01/10/2026",
+        },
+      })
+    ).toBe(
+      "Transit details set for container MEDU1234567: transporter ABC Logistics Ltd, truck Plate RAD 123A, driver John Doe, +250700000000, journey start 01/10/2026."
+    )
+  })
+
   it("describes an auto-update triggered by a stage's documents", () => {
     expect(
       describeAuditEntry({

@@ -49,7 +49,10 @@ export default async function ShipmentDetailPage({
   const shipment = await prisma.shipment.findUnique({
     where: { id },
     include: {
-      containers: { orderBy: { containerNumber: "asc" } },
+      containers: {
+        orderBy: { containerNumber: "asc" },
+        include: { transitDetails: true },
+      },
       createdBy: { select: { name: true } },
       transporter: { select: { name: true } },
       documents: {
@@ -57,7 +60,6 @@ export default async function ShipmentDetailPage({
         orderBy: { createdAt: "desc" },
       },
       stageAgents: true,
-      roadTransitDetails: true,
       auditLogs: {
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
@@ -75,6 +77,12 @@ export default async function ShipmentDetailPage({
       { name: a.name, contact: a.contact, position: a.position },
     ])
   ) as Partial<Record<DocumentStage, { name: string; contact: string; position: string | null }>>
+
+  const transitDetailsByContainerId = Object.fromEntries(
+    shipment.containers
+      .filter((c) => c.transitDetails !== null)
+      .map((c) => [c.id, c.transitDetails!])
+  )
 
   const transporters = canManageDocuments
     ? await prisma.user.findMany({
@@ -296,7 +304,8 @@ export default async function ShipmentDetailPage({
         shipmentId={shipment.id}
         documents={structuredDocuments}
         stageAgents={stageAgents}
-        roadTransitDetails={shipment.roadTransitDetails}
+        containers={shipment.containers}
+        transitDetailsByContainerId={transitDetailsByContainerId}
         canManage={canManageDocuments}
       />
 
