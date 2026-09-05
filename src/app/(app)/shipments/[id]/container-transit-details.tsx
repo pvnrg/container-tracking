@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { formatDate } from "@/lib/format"
 
 import { upsertContainerTransitDetails } from "./container-transit-actions"
 
@@ -90,26 +91,60 @@ function ContainerTransitRow({
   canManage: boolean
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-md border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex flex-col gap-2.5 rounded-md border bg-background px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3">
         <span className="font-medium">{container.containerNumber}</span>
-        {details ? (
-          <span className="truncate text-xs text-muted-foreground">
-            {details.transporterName}
-            {details.truckDetails ? ` · ${details.truckDetails}` : ""}
-            {details.driverDetails ? ` · ${details.driverDetails}` : ""}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">Not added yet</span>
+        {canManage && (
+          <TransitDetailsDialog
+            container={container}
+            details={details}
+            transportCompanyNames={transportCompanyNames}
+          />
         )}
       </div>
-      {canManage && (
-        <TransitDetailsDialog
-          container={container}
-          details={details}
-          transportCompanyNames={transportCompanyNames}
-        />
+
+      {details ? (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-2.5 text-xs sm:grid-cols-3">
+          <TransitField label="Transporter" value={details.transporterName} />
+          <TransitField
+            label="Truck Details"
+            value={details.truckDetails ?? "—"}
+          />
+          <TransitField
+            label="Driver Details"
+            value={details.driverDetails ?? "—"}
+          />
+          <TransitField
+            label="Assignment Date"
+            value={
+              details.assignmentDate ? formatDate(details.assignmentDate) : "—"
+            }
+          />
+          <TransitField
+            label="Loading Date"
+            value={details.loadingDate ? formatDate(details.loadingDate) : "—"}
+          />
+          <TransitField
+            label="Journey Start"
+            value={
+              details.journeyStartDate
+                ? formatDate(details.journeyStartDate)
+                : "—"
+            }
+          />
+        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground">Not added yet</span>
       )}
+    </div>
+  )
+}
+
+function TransitField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium break-words text-foreground">{value}</span>
     </div>
   )
 }
