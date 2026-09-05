@@ -74,59 +74,109 @@ export default async function DashboardPage() {
     prisma.document.count({ where: { isVerified: false } }),
   ])
 
-  const [pipelineAtSea, pipelineAtPort, pipelineInland, pipelineCompleted] =
+  // findMany (not count) for these -- the pipeline charts let you expand a
+  // bucket to see exactly which shipments/containers are in it.
+  const shipmentSelect = { id: true, blNumber: true } as const
+  const [shipmentsAtSea, shipmentsAtPort, shipmentsInland, shipmentsCompleted] =
     await Promise.all([
-      prisma.shipment.count({
+      prisma.shipment.findMany({
         where: { status: { in: ["SHIPPED_ON_BOARD", "IN_TRANSIT_SEA"] } },
+        select: shipmentSelect,
+        orderBy: { blNumber: "asc" },
       }),
-      prisma.shipment.count({
+      prisma.shipment.findMany({
         where: {
           status: { in: ["ARRIVED_PORT_OF_DISCHARGE", "CUSTOMS_PROCESSING"] },
         },
+        select: shipmentSelect,
+        orderBy: { blNumber: "asc" },
       }),
-      prisma.shipment.count({
+      prisma.shipment.findMany({
         where: {
           status: {
             in: ["CUSTOMS_CLEARED", "LOADED_ROAD_TRANSIT", "ARRIVED_DESTINATION"],
           },
         },
+        select: shipmentSelect,
+        orderBy: { blNumber: "asc" },
       }),
-      prisma.shipment.count({
+      prisma.shipment.findMany({
         where: { status: { in: ["OFFLOADED", "COMPLETED"] } },
+        select: shipmentSelect,
+        orderBy: { blNumber: "asc" },
       }),
     ])
 
+  const toShipmentDetails = (shipments: { id: string; blNumber: string }[]) =>
+    shipments.map((s) => ({
+      id: s.id,
+      label: s.blNumber,
+      href: `/shipments/${s.id}`,
+    }))
+
   const pipelineItems = [
-    { key: "at-sea", label: "At Sea", value: pipelineAtSea, colorClass: "bg-chart-1", icon: Ship },
-    { key: "at-port", label: "At Port / Customs", value: pipelineAtPort, colorClass: "bg-chart-3", icon: Anchor },
-    { key: "inland", label: "Inland Transit", value: pipelineInland, colorClass: "bg-chart-4", icon: Truck },
-    { key: "completed", label: "Completed", value: pipelineCompleted, colorClass: "bg-chart-5", icon: CheckCircle2 },
+    { key: "at-sea", label: "At Sea", value: shipmentsAtSea.length, colorClass: "bg-chart-1", icon: <Ship className="size-3.5 shrink-0" />, details: toShipmentDetails(shipmentsAtSea) },
+    { key: "at-port", label: "At Port / Customs", value: shipmentsAtPort.length, colorClass: "bg-chart-3", icon: <Anchor className="size-3.5 shrink-0" />, details: toShipmentDetails(shipmentsAtPort) },
+    { key: "inland", label: "Inland Transit", value: shipmentsInland.length, colorClass: "bg-chart-4", icon: <Truck className="size-3.5 shrink-0" />, details: toShipmentDetails(shipmentsInland) },
+    { key: "completed", label: "Completed", value: shipmentsCompleted.length, colorClass: "bg-chart-5", icon: <CheckCircle2 className="size-3.5 shrink-0" />, details: toShipmentDetails(shipmentsCompleted) },
   ]
 
+  const containerSelect = {
+    id: true,
+    containerNumber: true,
+    shipmentId: true,
+    shipment: { select: { blNumber: true } },
+  } as const
   const [
-    containerOnVessel,
-    containerAtPort,
-    containerInland,
-    containerCompleted,
+    containersOnVessel,
+    containersAtPort,
+    containersInland,
+    containersCompleted,
   ] = await Promise.all([
-    prisma.container.count({ where: { status: "ON_VESSEL" } }),
-    prisma.container.count({ where: { status: "DISCHARGED_AT_PORT" } }),
-    prisma.container.count({
-      where: { status: { in: ["IN_TRANSIT_TRUCK", "DELIVERED_WAREHOUSE"] } },
+    prisma.container.findMany({
+      where: { status: "ON_VESSEL" },
+      select: containerSelect,
+      orderBy: { containerNumber: "asc" },
     }),
-    prisma.container.count({
+    prisma.container.findMany({
+      where: { status: "DISCHARGED_AT_PORT" },
+      select: containerSelect,
+      orderBy: { containerNumber: "asc" },
+    }),
+    prisma.container.findMany({
+      where: { status: { in: ["IN_TRANSIT_TRUCK", "DELIVERED_WAREHOUSE"] } },
+      select: containerSelect,
+      orderBy: { containerNumber: "asc" },
+    }),
+    prisma.container.findMany({
       where: { status: { in: ["OFFLOADED", "EMPTY_RETURNED_TO_DEPOT"] } },
+      select: containerSelect,
+      orderBy: { containerNumber: "asc" },
     }),
   ])
+
+  const toContainerDetails = (
+    containers: {
+      id: string
+      containerNumber: string
+      shipmentId: string
+      shipment: { blNumber: string }
+    }[]
+  ) =>
+    containers.map((c) => ({
+      id: c.id,
+      label: `${c.containerNumber} · ${c.shipment.blNumber}`,
+      href: `/shipments/${c.shipmentId}`,
+    }))
 
   // Same journey-phase grouping and colors as pipelineItems above, so the
   // two charts read as directly comparable shipment-level vs.
   // container-level views of the same pipeline.
   const containerPipelineItems = [
-    { key: "on-vessel", label: "On Vessel", value: containerOnVessel, colorClass: "bg-chart-1", icon: Ship },
-    { key: "at-port", label: "At Port", value: containerAtPort, colorClass: "bg-chart-3", icon: Anchor },
-    { key: "inland", label: "Inland Transit", value: containerInland, colorClass: "bg-chart-4", icon: Truck },
-    { key: "completed", label: "Completed", value: containerCompleted, colorClass: "bg-chart-5", icon: CheckCircle2 },
+    { key: "on-vessel", label: "On Vessel", value: containersOnVessel.length, colorClass: "bg-chart-1", icon: <Ship className="size-3.5 shrink-0" />, details: toContainerDetails(containersOnVessel) },
+    { key: "at-port", label: "At Port", value: containersAtPort.length, colorClass: "bg-chart-3", icon: <Anchor className="size-3.5 shrink-0" />, details: toContainerDetails(containersAtPort) },
+    { key: "inland", label: "Inland Transit", value: containersInland.length, colorClass: "bg-chart-4", icon: <Truck className="size-3.5 shrink-0" />, details: toContainerDetails(containersInland) },
+    { key: "completed", label: "Completed", value: containersCompleted.length, colorClass: "bg-chart-5", icon: <CheckCircle2 className="size-3.5 shrink-0" />, details: toContainerDetails(containersCompleted) },
   ]
 
   // Neutral, always-relevant counts -- the day-to-day "where do things
@@ -221,13 +271,16 @@ export default async function DashboardPage() {
   }
 
   const detentionRiskItems = (Object.keys(riskCounts) as DetentionRiskLevel[]).map(
-    (level) => ({
-      key: level,
-      label: DETENTION_RISK_LABELS[level],
-      value: riskCounts[level],
-      colorClass: detentionRiskBarColors[level],
-      icon: detentionRiskIcons[level],
-    })
+    (level) => {
+      const RiskIcon = detentionRiskIcons[level]
+      return {
+        key: level,
+        label: DETENTION_RISK_LABELS[level],
+        value: riskCounts[level],
+        colorClass: detentionRiskBarColors[level],
+        icon: <RiskIcon className="size-3.5 shrink-0" />,
+      }
+    }
   )
 
   const upcomingShipments = await prisma.shipment.findMany({
@@ -380,9 +433,16 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle>Container Pipeline</CardTitle>
             <CardDescription>
-              {containerOnVessel + containerAtPort + containerInland + containerCompleted}{" "}
+              {containersOnVessel.length +
+                containersAtPort.length +
+                containersInland.length +
+                containersCompleted.length}{" "}
               container
-              {containerOnVessel + containerAtPort + containerInland + containerCompleted === 1
+              {containersOnVessel.length +
+                containersAtPort.length +
+                containersInland.length +
+                containersCompleted.length ===
+              1
                 ? ""
                 : "s"}{" "}
               total
