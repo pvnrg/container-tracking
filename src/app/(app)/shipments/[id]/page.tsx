@@ -32,7 +32,6 @@ import {
 import { DocumentsPanel } from "./documents-panel"
 import { GeneralDocumentsPanel } from "./general-documents-panel"
 import { TaxPaymentCard } from "./tax-payment-card"
-import { TransporterAssign } from "./transporter-assign"
 import { ShipmentDeleteButton } from "../shipment-delete-button"
 import { ShipmentEditDialog } from "../shipment-edit-dialog"
 
@@ -54,7 +53,6 @@ export default async function ShipmentDetailPage({
         include: { transitDetails: true },
       },
       createdBy: { select: { name: true } },
-      transporter: { select: { name: true } },
       documents: {
         include: { uploadedBy: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
@@ -83,14 +81,6 @@ export default async function ShipmentDetailPage({
       .filter((c) => c.transitDetails !== null)
       .map((c) => [c.id, c.transitDetails!])
   )
-
-  const transporters = canManageDocuments
-    ? await prisma.user.findMany({
-        where: { role: "TRANSPORTER", isActive: true },
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      })
-    : []
 
   const transportCompanies = canManageDocuments
     ? await prisma.transportCompany.findMany({
@@ -137,18 +127,11 @@ export default async function ShipmentDetailPage({
         ["Consignee", shipment.consigneeName ?? "—"],
         ["Notify Party", shipment.notifyParty ?? "—"],
         ["Created By", shipment.createdBy.name],
-        [
-          "Transporter",
-          canManageDocuments ? (
-            <TransporterAssign
-              shipmentId={shipment.id}
-              currentTransporterId={shipment.transporterId}
-              transporters={transporters}
-            />
-          ) : (
-            (shipment.transporter?.name ?? "Not yet assigned")
-          ),
-        ],
+        // Transporter assignment is hidden for now (unused) -- it still
+        // drives the "Ready to Load" and detention-reminder notifications
+        // via Shipment.transporterId, so TransporterAssign, assignTransporter,
+        // and that notification logic are untouched. Re-add a field here
+        // (see TransporterAssign in transporter-assign.tsx) to bring it back.
       ],
     },
     {
