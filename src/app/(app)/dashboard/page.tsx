@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   CircleCheck,
   ClipboardList,
-  FileClock,
   FileWarning,
   Flame,
   OctagonAlert,
@@ -130,55 +129,45 @@ export default async function DashboardPage() {
     { key: "completed", label: "Completed", value: containerCompleted, colorClass: "bg-chart-5", icon: CheckCircle2 },
   ]
 
+  // Neutral, always-relevant counts -- the day-to-day "where do things
+  // stand" view. Actionable counts (overdue, unverified, gaps) live in the
+  // attention strip below instead, so they aren't lost among steady-state
+  // numbers.
   const stats = [
     {
       label: "Total Shipments",
       value: total,
       icon: Package,
-      classes: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
+      iconClass: "text-sky-600 dark:text-sky-400",
       href: "/shipments",
     },
     {
-      label: "Active Shipments",
+      label: "Active",
       value: active,
       icon: Activity,
-      classes: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
+      iconClass: "text-indigo-600 dark:text-indigo-400",
       href: "/shipments?status=active",
     },
     {
       label: "In-Transit (Ocean)",
       value: inTransit,
       icon: Ship,
-      classes: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+      iconClass: "text-violet-600 dark:text-violet-400",
       href: "/shipments?status=IN_TRANSIT_SEA",
     },
     {
       label: "At Port of Discharge",
       value: atPort,
       icon: Anchor,
-      classes: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      iconClass: "text-amber-600 dark:text-amber-400",
       href: "/shipments?status=ARRIVED_PORT_OF_DISCHARGE",
     },
     {
       label: "Completed",
       value: completed,
       icon: CheckCircle2,
-      classes: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+      iconClass: "text-emerald-600 dark:text-emerald-400",
       href: "/shipments?status=COMPLETED",
-    },
-    {
-      label: "Overdue ETAs",
-      value: overdueEtas,
-      icon: AlertTriangle,
-      classes: "bg-red-500/10 text-red-700 dark:text-red-400",
-      href: "/shipments?status=overdue",
-    },
-    {
-      label: "Pending Doc. Verifications",
-      value: pendingDocVerifications,
-      icon: FileClock,
-      classes: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-      href: "/shipments?status=docs-pending",
     },
   ]
 
@@ -294,30 +283,82 @@ export default async function DashboardPage() {
     }))
     .filter((s) => s.gaps.length > 0)
 
+  const attentionItems = [
+    {
+      key: "overdue",
+      label: "Overdue ETAs",
+      value: overdueEtas,
+      href: "/shipments?status=overdue",
+      classes: "border-red-600/30 bg-red-500/10 text-red-700 dark:text-red-400",
+    },
+    {
+      key: "pending-docs",
+      label: "Pending Verifications",
+      value: pendingDocVerifications,
+      href: "/shipments?status=docs-pending",
+      classes:
+        "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    },
+    {
+      key: "stage-skip",
+      label: "Out-of-Order Paperwork",
+      value: stageSkipAlerts.length,
+      href: "#document-stage-alerts",
+      classes:
+        "border-orange-600/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+    },
+    {
+      key: "stage2",
+      label: "Stage 2 Details Needed",
+      value: stage2Alerts.length,
+      href: "#stage2-alerts",
+      classes: "border-sky-600/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+    },
+  ].filter((item) => item.value > 0)
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+      {attentionItems.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed p-3">
+          <span className="mr-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Needs attention
+          </span>
+          {attentionItems.map((item) => (
+            <a
+              key={item.key}
+              href={item.href}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-opacity hover:opacity-80",
+                item.classes
+              )}
+            >
+              {item.label}
+              <span className="font-bold tabular-nums">{item.value}</span>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-emerald-600/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+          <CircleCheck className="size-4 shrink-0" />
+          All caught up — no overdue ETAs, unverified documents, or paperwork
+          gaps right now.
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((s) => (
-          <Link key={s.label} href={s.href}>
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {s.label}
-                </CardTitle>
-                <div
-                  className={cn(
-                    "flex size-9 items-center justify-center rounded-full",
-                    s.classes
-                  )}
-                >
-                  <s.icon className="size-4.5" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{s.value}</p>
-              </CardContent>
-            </Card>
+          <Link
+            key={s.label}
+            href={s.href}
+            className="flex flex-col gap-2 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40"
+          >
+            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <s.icon className={cn("size-3.5 shrink-0", s.iconClass)} />
+              <span className="truncate">{s.label}</span>
+            </span>
+            <span className="text-3xl font-bold tabular-nums">{s.value}</span>
           </Link>
         ))}
       </div>
@@ -326,6 +367,9 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Shipment Pipeline</CardTitle>
+            <CardDescription>
+              {total} shipment{total === 1 ? "" : "s"} total
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <HorizontalBarChart items={pipelineItems} />
@@ -335,6 +379,14 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Container Pipeline</CardTitle>
+            <CardDescription>
+              {containerOnVessel + containerAtPort + containerInland + containerCompleted}{" "}
+              container
+              {containerOnVessel + containerAtPort + containerInland + containerCompleted === 1
+                ? ""
+                : "s"}{" "}
+              total
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <HorizontalBarChart items={containerPipelineItems} />
@@ -342,7 +394,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card id="document-stage-alerts">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-400">
@@ -398,7 +450,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="stage2-alerts">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-400">
