@@ -5,27 +5,14 @@ import { Prisma, ShipmentStatus } from "@prisma/client"
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { EmptyState } from "@/components/empty-state"
-import { ContainerStackIllustration } from "@/components/illustrations/container-stack"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
-  DISCHARGE_PORT_LABELS,
   INLAND_TRANSIT_STATUSES,
-  SHIPMENT_STATUS_BADGE_CLASSES,
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
 
-import { ShipmentDeleteButton } from "./shipment-delete-button"
-import { ShipmentEditDialog } from "./shipment-edit-dialog"
+import { ShipmentsTable } from "./shipments-table"
 
 const FILTER_LABELS: Record<string, string> = {
   active: "Active",
@@ -104,85 +91,23 @@ export default async function ShipmentsPage({
         </div>
       )}
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>BL Number</TableHead>
-              <TableHead>Shipping Line</TableHead>
-              <TableHead>Discharge Port</TableHead>
-              <TableHead>Containers</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Current ETA</TableHead>
-              {canCreate && <TableHead className="text-right">Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shipments.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={canCreate ? 7 : 6} className="p-0">
-                  <EmptyState
-                    illustration={
-                      <ContainerStackIllustration className="w-40 opacity-80" />
-                    }
-                    title={filterLabel ? "No matching shipments" : "No shipments yet"}
-                    description={
-                      filterLabel
-                        ? `No shipments match "${filterLabel}".`
-                        : canCreate
-                          ? "Create your first shipment to start tracking it."
-                          : "Shipments will appear here once one is created."
-                    }
-                  />
-                </TableCell>
-              </TableRow>
-            )}
-            {shipments.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell>
-                  <Link
-                    href={`/shipments/${s.id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {s.blNumber}
-                  </Link>
-                </TableCell>
-                <TableCell>{s.shippingLine}</TableCell>
-                <TableCell>{DISCHARGE_PORT_LABELS[s.dischargePort]}</TableCell>
-                <TableCell>{s._count.containers}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={SHIPMENT_STATUS_BADGE_CLASSES[s.status]}
-                  >
-                    {SHIPMENT_STATUS_LABELS[s.status]}
-                  </Badge>
-                </TableCell>
-                <TableCell>{s.currentEta.toLocaleDateString()}</TableCell>
-                {canCreate && (
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <ShipmentEditDialog
-                        shipment={{
-                          id: s.id,
-                          blNumber: s.blNumber,
-                          status: s.status,
-                          currentEta: s.currentEta,
-                          actualDischargeDate: s.actualDischargeDate,
-                          transitStartedAt: s.transitStartedAt,
-                          transitArrivalEta: s.transitArrivalEta,
-                          destinationWarehouse: s.destinationWarehouse,
-                        }}
-                      />
-                      <ShipmentDeleteButton shipmentId={s.id} blNumber={s.blNumber} />
-                    </div>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <ShipmentsTable
+        shipments={shipments.map((s) => ({
+          id: s.id,
+          blNumber: s.blNumber,
+          shippingLine: s.shippingLine,
+          dischargePort: s.dischargePort,
+          containerCount: s._count.containers,
+          status: s.status,
+          currentEta: s.currentEta,
+          actualDischargeDate: s.actualDischargeDate,
+          transitStartedAt: s.transitStartedAt,
+          transitArrivalEta: s.transitArrivalEta,
+          destinationWarehouse: s.destinationWarehouse,
+        }))}
+        canManage={canCreate}
+        presetFilterLabel={filterLabel}
+      />
     </div>
   )
 }

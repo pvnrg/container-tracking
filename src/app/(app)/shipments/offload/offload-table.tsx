@@ -1,230 +1,87 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { ContainerStatus, RwandanDestination } from "@prisma/client"
-import { ListFilter, PackageCheck, Save } from "lucide-react"
+import { ContainerStatus } from "@prisma/client"
+import { ListFilter } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { DataTable } from "@/components/data-table/data-table"
 import { EmptyState } from "@/components/empty-state"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { formatDateTime } from "@/lib/format"
-import {
-  CONTAINER_STATUS_BADGE_CLASSES,
-  CONTAINER_STATUS_LABELS,
-  DESTINATION_WAREHOUSE_LABELS,
-} from "@/lib/shipment-labels"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { CONTAINER_STATUS_LABELS } from "@/lib/shipment-labels"
 
-import { confirmContainerOffload, scheduleContainerOffload } from "./actions"
+import { offloadColumns, type OffloadContainer } from "./columns"
 
-const COMPLETED_STATUSES: ContainerStatus[] = [
-  "OFFLOADED",
-  "EMPTY_RETURNED_TO_DEPOT",
-]
-
-export type OffloadContainer = {
-  id: string
-  containerNumber: string
-  inventoryReference: string
-  status: ContainerStatus
-  offloadScheduledAt: Date | null
-  actualOffloadedAt: Date | null
-  shipment: {
-    id: string
-    blNumber: string
-    destinationWarehouse: RwandanDestination | null
-  }
-}
-
-function toDatetimeLocalValue(date: Date | null) {
-  if (!date) return ""
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
+const ALL_STATUSES = "__all__"
 
 export function OffloadTable({
   containers,
 }: {
   containers: OffloadContainer[]
 }) {
-  const [hideCompleted, setHideCompleted] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUSES)
 
-  const visible = useMemo(
+  const availableStatuses = useMemo(
+    () => Array.from(new Set(containers.map((c) => c.status))),
+    [containers]
+  )
+
+  const filteredContainers = useMemo(
     () =>
-      hideCompleted
-        ? containers.filter((c) => !COMPLETED_STATUSES.includes(c.status))
-        : containers,
-    [containers, hideCompleted]
+      statusFilter === ALL_STATUSES
+        ? containers
+        : containers.filter((c) => c.status === statusFilter),
+    [containers, statusFilter]
   )
 
-  return (
-    <div className="flex flex-col gap-4">
-      <label className="flex w-fit items-center gap-2 text-sm text-muted-foreground">
-        <input
-          type="checkbox"
-          className="size-4 rounded border-input"
-          checked={hideCompleted}
-          onChange={(e) => setHideCompleted(e.target.checked)}
-        />
-        Hide completed containers
-      </label>
-
+  if (containers.length === 0) {
+    return (
       <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>BL Number</TableHead>
-              <TableHead>Container Number</TableHead>
-              <TableHead>Inventory Reference</TableHead>
-              <TableHead>Destination Warehouse</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Offload Scheduled</TableHead>
-              <TableHead>Actual Offloaded</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visible.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="p-0">
-                  <EmptyState
-                    icon={ListFilter}
-                    title="No containers to show"
-                    description={
-                      hideCompleted
-                        ? 'Try unchecking "Hide completed containers".'
-                        : "Containers appear here once their shipment has left port."
-                    }
-                  />
-                </TableCell>
-              </TableRow>
-            )}
-            {visible.map((container) => (
-              <OffloadRow key={container.id} container={container} />
-            ))}
-          </TableBody>
-        </Table>
+        <EmptyState
+          icon={ListFilter}
+          title="No containers to show"
+          description="Containers appear here once their shipment has left port."
+        />
       </div>
-    </div>
-  )
-}
-
-function OffloadRow({ container }: { container: OffloadContainer }) {
-  const router = useRouter()
-  const [scheduledAt, setScheduledAt] = useState(
-    toDatetimeLocalValue(container.offloadScheduledAt)
-  )
-  const [isSavingSchedule, setIsSavingSchedule] = useState(false)
-  const [isConfirming, setIsConfirming] = useState(false)
-
-  const isDirty =
-    scheduledAt !== toDatetimeLocalValue(container.offloadScheduledAt)
-
-  const handleSaveSchedule = async () => {
-    setIsSavingSchedule(true)
-    try {
-      await scheduleContainerOffload({
-        containerId: container.id,
-        offloadScheduledAt: scheduledAt,
-      })
-      toast.success(`${container.containerNumber} schedule saved`)
-      router.refresh()
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to save schedule"
-      )
-    } finally {
-      setIsSavingSchedule(false)
-    }
-  }
-
-  const handleConfirm = async () => {
-    setIsConfirming(true)
-    try {
-      await confirmContainerOffload(container.id)
-      toast.success(`${container.containerNumber} offload confirmed`)
-      router.refresh()
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to confirm offload"
-      )
-    } finally {
-      setIsConfirming(false)
-    }
+    )
   }
 
   return (
-    <TableRow>
-      <TableCell>
-        <Link
-          href={`/shipments/${container.shipment.id}`}
-          className="font-medium hover:underline"
+    <DataTable
+      columns={offloadColumns}
+      data={filteredContainers}
+      searchableColumns={["blNumber", "containerNumber"]}
+      searchPlaceholder="Search BL or container number..."
+      emptyMessage="No containers match your filters."
+      filters={
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => setStatusFilter(value ?? ALL_STATUSES)}
         >
-          {container.shipment.blNumber}
-        </Link>
-      </TableCell>
-      <TableCell>{container.containerNumber}</TableCell>
-      <TableCell>{container.inventoryReference}</TableCell>
-      <TableCell>
-        {container.shipment.destinationWarehouse
-          ? DESTINATION_WAREHOUSE_LABELS[container.shipment.destinationWarehouse]
-          : "Not yet allocated"}
-      </TableCell>
-      <TableCell>
-        <Badge
-          variant="outline"
-          className={CONTAINER_STATUS_BADGE_CLASSES[container.status]}
-        >
-          {CONTAINER_STATUS_LABELS[container.status]}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <Input
-            type="datetime-local"
-            className="w-56"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!isDirty || isSavingSchedule}
-            onClick={handleSaveSchedule}
-          >
-            <Save data-icon="inline-start" />
-            {isSavingSchedule ? "Saving..." : "Save"}
-          </Button>
-        </div>
-      </TableCell>
-      <TableCell>
-        {container.actualOffloadedAt ? (
-          <span className="text-sm">
-            {formatDateTime(container.actualOffloadedAt)}
-          </span>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            disabled={isConfirming}
-            onClick={handleConfirm}
-          >
-            <PackageCheck data-icon="inline-start" />
-            {isConfirming ? "Confirming..." : "Confirm Offload"}
-          </Button>
-        )}
-      </TableCell>
-    </TableRow>
+          <SelectTrigger size="sm" className="w-48">
+            <SelectValue placeholder="All statuses">
+              {(value: string | null) =>
+                value && value !== ALL_STATUSES
+                  ? CONTAINER_STATUS_LABELS[value as ContainerStatus]
+                  : "All statuses"
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
+            {availableStatuses.map((status) => (
+              <SelectItem key={status} value={status}>
+                {CONTAINER_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+    />
   )
 }
