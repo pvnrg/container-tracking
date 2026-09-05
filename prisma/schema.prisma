@@ -304,8 +304,24 @@ model ContainerTransitDetails {
   driverDetails    String?
   journeyStartDate DateTime?
 
+  drivers TransitDriver[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A driver assigned to a container's truck -- a truck can have more than
+// one over the journey (e.g. a primary and a relief driver), so this is a
+// list off ContainerTransitDetails rather than a couple of flat columns.
+model TransitDriver {
+  id                        String                  @id @default(uuid())
+  containerTransitDetailsId String
+  containerTransitDetails   ContainerTransitDetails @relation(fields: [containerTransitDetailsId], references: [id], onDelete: Cascade)
+
+  name  String
+  phone String?
+
+  createdAt DateTime @default(now())
 }
 
 // A single checkpoint in a container's road-transit journey for Stage 3 --
