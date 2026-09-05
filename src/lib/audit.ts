@@ -16,6 +16,8 @@ export type AuditAction =
   | "TAX_PAYMENT_RECORDED"
   | "STAGE_AGENT_SET"
   | "ROAD_TRANSIT_DETAILS_SET"
+  | "TRUCK_STATUS_UPDATE_ADDED"
+  | "TRUCK_STATUS_UPDATE_DELETED"
   | "STATUS_AUTO_UPDATED"
 
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -32,6 +34,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   TAX_PAYMENT_RECORDED: "Tax Payment Recorded",
   STAGE_AGENT_SET: "Stage Agent Set",
   ROAD_TRANSIT_DETAILS_SET: "Road Transit Details Set",
+  TRUCK_STATUS_UPDATE_ADDED: "Truck Status Update Added",
+  TRUCK_STATUS_UPDATE_DELETED: "Truck Status Update Deleted",
   STATUS_AUTO_UPDATED: "Status Auto-Updated",
 }
 
@@ -106,6 +110,10 @@ export function describeAuditEntry(entry: {
       return `Agent for ${newV.stageLabel ?? ""} set to ${newV.name ?? ""}${newV.position ? ` (${newV.position})` : ""}, contact ${newV.contact ?? "—"}.`
     case "ROAD_TRANSIT_DETAILS_SET":
       return `Transit details set for container ${newV.containerNumber ?? "—"}: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, driver ${newV.driverDetails ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
+    case "TRUCK_STATUS_UPDATE_ADDED":
+      return `Truck status update for container ${newV.containerNumber ?? "—"}: ${newV.location ?? "—"} at ${newV.timestamp ?? "—"}.${newV.notes ? ` Notes: "${newV.notes}"` : ""}`
+    case "TRUCK_STATUS_UPDATE_DELETED":
+      return `Deleted truck status update for container ${oldV.containerNumber ?? "—"}: ${oldV.location ?? "—"} at ${oldV.timestamp ?? "—"}.`
     case "STATUS_AUTO_UPDATED": {
       const trigger = newV.stageLabel
         ? `after ${newV.stageLabel}'s documents were verified`

@@ -50,7 +50,13 @@ export default async function ShipmentDetailPage({
     include: {
       containers: {
         orderBy: { containerNumber: "asc" },
-        include: { transitDetails: true },
+        include: {
+          transitDetails: true,
+          truckStatusUpdates: {
+            include: { createdBy: { select: { name: true } } },
+            orderBy: { timestamp: "desc" },
+          },
+        },
       },
       createdBy: { select: { name: true } },
       documents: {
@@ -80,6 +86,10 @@ export default async function ShipmentDetailPage({
     shipment.containers
       .filter((c) => c.transitDetails !== null)
       .map((c) => [c.id, c.transitDetails!])
+  )
+
+  const truckStatusUpdatesByContainerId = Object.fromEntries(
+    shipment.containers.map((c) => [c.id, c.truckStatusUpdates])
   )
 
   const transportCompanies = canManageDocuments
@@ -297,6 +307,7 @@ export default async function ShipmentDetailPage({
         containers={shipment.containers}
         transitDetailsByContainerId={transitDetailsByContainerId}
         transportCompanyNames={transportCompanies.map((t) => t.name)}
+        truckStatusUpdatesByContainerId={truckStatusUpdatesByContainerId}
         canManage={canManageDocuments}
       />
 

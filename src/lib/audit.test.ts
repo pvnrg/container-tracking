@@ -79,6 +79,39 @@ describe("describeAuditEntry", () => {
     )
   })
 
+  it("describes a truck status update being added", () => {
+    expect(
+      describeAuditEntry({
+        action: "TRUCK_STATUS_UPDATE_ADDED",
+        oldValue: null,
+        newValue: {
+          containerNumber: "MEDU1234567",
+          location: "Nairobi border checkpoint",
+          timestamp: "05/09/2026, 14:00",
+          notes: "Cleared customs, continuing to Kigali",
+        },
+      })
+    ).toBe(
+      'Truck status update for container MEDU1234567: Nairobi border checkpoint at 05/09/2026, 14:00. Notes: "Cleared customs, continuing to Kigali"'
+    )
+  })
+
+  it("describes a truck status update being deleted", () => {
+    expect(
+      describeAuditEntry({
+        action: "TRUCK_STATUS_UPDATE_DELETED",
+        oldValue: {
+          containerNumber: "MEDU1234567",
+          location: "Nairobi border checkpoint",
+          timestamp: "05/09/2026, 14:00",
+        },
+        newValue: null,
+      })
+    ).toBe(
+      "Deleted truck status update for container MEDU1234567: Nairobi border checkpoint at 05/09/2026, 14:00."
+    )
+  })
+
   it("describes an auto-update triggered by a stage's documents", () => {
     expect(
       describeAuditEntry({

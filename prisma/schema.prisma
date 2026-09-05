@@ -97,9 +97,10 @@ model User {
 
   assignedShipments Shipment[]      @relation("TransporterShipments")
   createdShipments  Shipment[]      @relation("OperatorCreatedShipments")
-  uploadedDocuments Document[]
-  notifications     Notification[]
-  auditLogs         ShipmentAudit[]
+  uploadedDocuments  Document[]
+  notifications      Notification[]
+  auditLogs          ShipmentAudit[]
+  truckStatusUpdates TruckStatusUpdate[]
 
   @@index([role])
 }
@@ -197,8 +198,9 @@ model Container {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  detentionTracker DetentionTracker?
-  transitDetails   ContainerTransitDetails?
+  detentionTracker    DetentionTracker?
+  transitDetails      ContainerTransitDetails?
+  truckStatusUpdates  TruckStatusUpdate[]
 
   @@unique([shipmentId, containerNumber])
   @@index([containerNumber])
@@ -304,6 +306,26 @@ model ContainerTransitDetails {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A single checkpoint in a container's road-transit journey for Stage 3 --
+// one container can have many of these over time, building up a timeline
+// (e.g. "Departed port", "Border crossing", "Arrived warehouse"). Keyed off
+// Container, not Shipment, for the same reason as ContainerTransitDetails.
+model TruckStatusUpdate {
+  id          String    @id @default(uuid())
+  containerId String
+  container   Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+
+  location  String
+  timestamp DateTime
+  notes     String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([containerId, timestamp])
 }
 
 // A running list of trucking companies typed into Transit Details, so

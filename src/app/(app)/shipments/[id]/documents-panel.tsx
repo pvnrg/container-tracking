@@ -61,6 +61,10 @@ import {
 } from "./container-transit-details"
 import { deleteDocument, uploadDocument, verifyDocument } from "./documents-actions"
 import { StageAgentBlock, type StageAgentInfo } from "./stage-agent"
+import {
+  TruckStatusUpdatesBlock,
+  type TruckStatusUpdateInfo,
+} from "./truck-status-updates"
 
 export type DocumentRow = {
   id: string
@@ -133,6 +137,7 @@ export function DocumentsPanel({
   containers,
   transitDetailsByContainerId,
   transportCompanyNames,
+  truckStatusUpdatesByContainerId,
   canManage,
 }: {
   shipmentId: string
@@ -141,6 +146,7 @@ export function DocumentsPanel({
   containers: ContainerForTransit[]
   transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
   transportCompanyNames: string[]
+  truckStatusUpdatesByContainerId: Record<string, TruckStatusUpdateInfo[]>
   canManage: boolean
 }) {
   const stages = Object.values(DocumentStage)
@@ -183,6 +189,7 @@ export function DocumentsPanel({
           containers={containers}
           transitDetailsByContainerId={transitDetailsByContainerId}
           transportCompanyNames={transportCompanyNames}
+          truckStatusUpdatesByContainerId={truckStatusUpdatesByContainerId}
           canManage={canManage}
         />
       ))}
@@ -198,6 +205,7 @@ function StageCard({
   containers,
   transitDetailsByContainerId,
   transportCompanyNames,
+  truckStatusUpdatesByContainerId,
   canManage,
 }: {
   shipmentId: string
@@ -207,6 +215,7 @@ function StageCard({
   containers: ContainerForTransit[]
   transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
   transportCompanyNames: string[]
+  truckStatusUpdatesByContainerId: Record<string, TruckStatusUpdateInfo[]>
   canManage: boolean
 }) {
   const documents = allDocuments.filter((d) => d.stage === stage)
@@ -263,6 +272,13 @@ function StageCard({
               containers={containers}
               detailsByContainerId={transitDetailsByContainerId}
               transportCompanyNames={transportCompanyNames}
+              canManage={canManage}
+            />
+          )}
+          {stage === "ROAD_TRANSIT" && (
+            <TruckStatusUpdatesBlock
+              containers={containers}
+              updatesByContainerId={truckStatusUpdatesByContainerId}
               canManage={canManage}
             />
           )}
