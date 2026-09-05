@@ -6,6 +6,7 @@ import { RwandanDestination, ShipmentStatus } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { syncContainerStatusToShipment } from "@/lib/container-status-sync"
 import { ensureDetentionTrackers } from "@/lib/detention-trackers"
 import { STAGE_DOCUMENT_TYPES } from "@/lib/document-labels"
 import { formatDate } from "@/lib/format"
@@ -95,6 +96,8 @@ export async function updateShipmentTracking(input: {
       destinationWarehouse: parsed.destinationWarehouse ?? undefined,
     },
   })
+
+  await syncContainerStatusToShipment(parsed.shipmentId, parsed.status)
 
   if (
     shipment.status !== parsed.status ||

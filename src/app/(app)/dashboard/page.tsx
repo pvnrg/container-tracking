@@ -85,17 +85,21 @@ export default async function DashboardPage() {
         orderBy: { blNumber: "asc" },
       }),
       prisma.shipment.findMany({
+        // CUSTOMS_CLEARED sits here, not in "inland" -- cleared just means
+        // ready to load, the cargo is still physically at the port until
+        // it's actually LOADED_ROAD_TRANSIT, matching where its containers
+        // sit in the Container Pipeline (still DISCHARGED_AT_PORT).
         where: {
-          status: { in: ["ARRIVED_PORT_OF_DISCHARGE", "CUSTOMS_PROCESSING"] },
+          status: {
+            in: ["ARRIVED_PORT_OF_DISCHARGE", "CUSTOMS_PROCESSING", "CUSTOMS_CLEARED"],
+          },
         },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
       prisma.shipment.findMany({
         where: {
-          status: {
-            in: ["CUSTOMS_CLEARED", "LOADED_ROAD_TRANSIT", "ARRIVED_DESTINATION"],
-          },
+          status: { in: ["LOADED_ROAD_TRANSIT", "ARRIVED_DESTINATION"] },
         },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },

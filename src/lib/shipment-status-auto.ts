@@ -1,6 +1,7 @@
 import { DocumentStage, ShipmentStatus } from "@prisma/client"
 
 import { logShipmentAudit } from "./audit"
+import { syncContainerStatusToShipment } from "./container-status-sync"
 import { ensureDetentionTrackers } from "./detention-trackers"
 import { DOCUMENT_STAGE_LABELS } from "./document-labels"
 import { isStageComplete } from "./document-stage-alerts"
@@ -104,6 +105,8 @@ export async function maybeAutoAdvanceStatus({
     where: { id: shipmentId },
     data: { status: furthestEligible, ...extra },
   })
+
+  await syncContainerStatusToShipment(shipmentId, furthestEligible)
 
   const triggeringStage = STAGE_ORDER.find(
     (stage) => STAGE_STATUS_MAP[stage] === furthestEligible
