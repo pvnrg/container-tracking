@@ -42,6 +42,7 @@ import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
   DISCHARGE_PORT_LABELS,
+  INLAND_TRANSIT_STATUSES,
 } from "@/lib/shipment-labels"
 import { getStage2Gaps, STAGE2_GAP_LABELS } from "@/lib/stage2-readiness"
 import { cn } from "@/lib/utils"
@@ -98,9 +99,7 @@ export default async function DashboardPage() {
         orderBy: { blNumber: "asc" },
       }),
       prisma.shipment.findMany({
-        where: {
-          status: { in: ["LOADED_ROAD_TRANSIT", "ARRIVED_DESTINATION"] },
-        },
+        where: { status: { in: INLAND_TRANSIT_STATUSES } },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
@@ -215,6 +214,16 @@ export default async function DashboardPage() {
       icon: Anchor,
       iconClass: "text-amber-600 dark:text-amber-400",
       href: "/shipments?status=ARRIVED_PORT_OF_DISCHARGE",
+    },
+    {
+      // Same shipmentsInland query that feeds the Shipment Pipeline chart's
+      // "Inland Transit" bucket below, so this tile can never drift out of
+      // sync with it.
+      label: "Inland Transit",
+      value: shipmentsInland.length,
+      icon: Truck,
+      iconClass: "text-purple-600 dark:text-purple-400",
+      href: "/shipments?status=inland-transit",
     },
     {
       label: "Completed",
@@ -404,7 +413,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
           <Link
             key={s.label}

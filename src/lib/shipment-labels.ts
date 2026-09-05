@@ -44,6 +44,17 @@ export const ARRIVED_OR_LATER_STATUSES: ShipmentStatus[] = [
   "COMPLETED",
 ]
 
+// Statuses where the cargo has actually left the port and is moving (or has
+// arrived) inland -- CUSTOMS_CLEARED is deliberately excluded, since that
+// only means "ready to load," not yet physically on the road (its
+// containers still sit at DISCHARGED_AT_PORT). Shared by the dashboard's
+// Inland Transit KPI/pipeline bucket and the shipments list filter of the
+// same name, so both always agree.
+export const INLAND_TRANSIT_STATUSES: ShipmentStatus[] = [
+  "LOADED_ROAD_TRANSIT",
+  "ARRIVED_DESTINATION",
+]
+
 // Declaration order matches the SRD's chronological milestone sequence,
 // so this doubles as a forward-only progress comparator.
 export const SHIPMENT_STATUS_ORDER: ShipmentStatus[] = [
