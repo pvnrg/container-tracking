@@ -5,8 +5,9 @@ import { runDailyChecks } from "@/lib/daily-checks"
 let started = false
 
 /**
- * Runs the 7-day ETA broadcast and detention escalation checks on a
- * schedule inside the Next.js server process. Only works for
+ * Runs the ETA-arrival auto-advance, 7-day ETA broadcast, and detention
+ * escalation checks on a schedule inside the Next.js server process. Only
+ * works for
  * deployments that keep a persistent Node process alive (this
  * dev server, a VPS, a Docker container running `next start`) --
  * not on serverless platforms like Vercel, which don't run code

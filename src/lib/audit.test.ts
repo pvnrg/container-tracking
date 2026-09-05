@@ -61,6 +61,36 @@ describe("describeAuditEntry", () => {
     ).toBe('Deleted "invoice.pdf".')
   })
 
+  it("describes an auto-update triggered by a stage's documents", () => {
+    expect(
+      describeAuditEntry({
+        action: "STATUS_AUTO_UPDATED",
+        oldValue: { status: "Shipped on Board" },
+        newValue: {
+          status: "In-Transit (Ocean)",
+          stageLabel: "Stage 1: Entry / Pre-Shipment",
+        },
+      })
+    ).toBe(
+      'Status auto-updated from "Shipped on Board" to "In-Transit (Ocean)" after Stage 1: Entry / Pre-Shipment\'s documents were verified.'
+    )
+  })
+
+  it("describes an auto-update triggered by the ETA passing", () => {
+    expect(
+      describeAuditEntry({
+        action: "STATUS_AUTO_UPDATED",
+        oldValue: { status: "In-Transit (Ocean)" },
+        newValue: {
+          status: "Arrived at Port of Discharge",
+          reason: "because its ETA was reached",
+        },
+      })
+    ).toBe(
+      'Status auto-updated from "In-Transit (Ocean)" to "Arrived at Port of Discharge" because its ETA was reached.'
+    )
+  })
+
   it("falls back to the raw action string for unknown actions", () => {
     expect(
       describeAuditEntry({

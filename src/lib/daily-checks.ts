@@ -1,6 +1,48 @@
+import { logShipmentAudit } from "@/lib/audit"
+import { ensureDetentionTrackers } from "@/lib/detention-trackers"
 import { createNotification } from "@/lib/notifications"
 import { prisma } from "@/lib/prisma"
-import { ARRIVED_OR_LATER_STATUSES } from "@/lib/shipment-labels"
+import {
+  ARRIVED_OR_LATER_STATUSES,
+  SHIPMENT_STATUS_LABELS,
+} from "@/lib/shipment-labels"
+
+// Once a shipment's ETA has passed while it's still shown as at sea, treat
+// it as having reached the discharge port -- there's no separate "vessel
+// arrival" signal in this system, so the ETA crossing is the trigger.
+async function runEtaArrivalAutoAdvance() {
+  const dueShipments = await prisma.shipment.findMany({
+    where: {
+      status: "IN_TRANSIT_SEA",
+      currentEta: { lte: new Date() },
+    },
+    select: { id: true, currentEta: true },
+  })
+
+  for (const shipment of dueShipments) {
+    await prisma.shipment.update({
+      where: { id: shipment.id },
+      data: {
+        status: "ARRIVED_PORT_OF_DISCHARGE",
+        actualDischargeDate: shipment.currentEta,
+      },
+    })
+
+    await logShipmentAudit({
+      shipmentId: shipment.id,
+      action: "STATUS_AUTO_UPDATED",
+      oldValue: { status: SHIPMENT_STATUS_LABELS.IN_TRANSIT_SEA },
+      newValue: {
+        status: SHIPMENT_STATUS_LABELS.ARRIVED_PORT_OF_DISCHARGE,
+        reason: "because its ETA was reached",
+      },
+    })
+
+    await ensureDetentionTrackers(shipment.id)
+  }
+
+  return { shipmentsAdvanced: dueShipments.length }
+}
 
 async function runSevenDayBroadcast() {
   const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -113,8 +155,11 @@ async function runDetentionEscalations() {
 }
 
 export async function runDailyChecks() {
+  // Runs first so a shipment whose ETA has just passed is no longer
+  // considered "at sea" by the time the 7-day broadcast below queries for it.
+  const etaArrivalAutoAdvance = await runEtaArrivalAutoAdvance()
   const sevenDayBroadcast = await runSevenDayBroadcast()
   const detentionEscalations = await runDetentionEscalations()
 
-  return { sevenDayBroadcast, detentionEscalations }
+  return { etaArrivalAutoAdvance, sevenDayBroadcast, detentionEscalations }
 }

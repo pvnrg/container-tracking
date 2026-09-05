@@ -106,8 +106,12 @@ export function describeAuditEntry(entry: {
       return `Agent for ${newV.stageLabel ?? ""} set to ${newV.name ?? ""}${newV.position ? ` (${newV.position})` : ""}, contact ${newV.contact ?? "—"}.`
     case "ROAD_TRANSIT_DETAILS_SET":
       return `Road transit details set: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
-    case "STATUS_AUTO_UPDATED":
-      return `Status auto-updated from "${oldV.status ?? "—"}" to "${newV.status ?? "—"}" after ${newV.stageLabel ?? "a stage"}'s documents were verified.`
+    case "STATUS_AUTO_UPDATED": {
+      const trigger = newV.stageLabel
+        ? `after ${newV.stageLabel}'s documents were verified`
+        : (newV.reason as string | undefined) ?? "automatically"
+      return `Status auto-updated from "${oldV.status ?? "—"}" to "${newV.status ?? "—"}" ${trigger}.`
+    }
     default:
       return entry.action
   }
