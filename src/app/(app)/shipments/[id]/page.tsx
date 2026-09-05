@@ -92,6 +92,13 @@ export default async function ShipmentDetailPage({
       })
     : []
 
+  const transportCompanies = canManageDocuments
+    ? await prisma.transportCompany.findMany({
+        select: { name: true },
+        orderBy: { name: "asc" },
+      })
+    : []
+
   const structuredDocuments = shipment.documents.filter(
     (d): d is typeof d & { stage: DocumentStage; type: DocumentType } =>
       d.stage !== null && d.type !== null
@@ -306,6 +313,7 @@ export default async function ShipmentDetailPage({
         stageAgents={stageAgents}
         containers={shipment.containers}
         transitDetailsByContainerId={transitDetailsByContainerId}
+        transportCompanyNames={transportCompanies.map((t) => t.name)}
         canManage={canManageDocuments}
       />
 

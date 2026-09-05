@@ -57,6 +57,14 @@ export async function upsertContainerTransitDetails(input: {
     update: data,
   })
 
+  // Remember this transporter name so it shows up as a suggestion next
+  // time, instead of being retyped -- a no-op if it's already known.
+  await prisma.transportCompany.upsert({
+    where: { name: data.transporterName },
+    create: { name: data.transporterName },
+    update: {},
+  })
+
   await logShipmentAudit({
     shipmentId: container.shipmentId,
     userId: session.user.id,

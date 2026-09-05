@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Truck } from "lucide-react"
 
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteInput,
+  AutocompleteItem,
+} from "@/components/ui/autocomplete"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -42,10 +48,12 @@ function toDateInputValue(date: Date | null) {
 export function ContainerTransitDetailsBlock({
   containers,
   detailsByContainerId,
+  transportCompanyNames,
   canManage,
 }: {
   containers: ContainerForTransit[]
   detailsByContainerId: Record<string, ContainerTransitDetailsInfo>
+  transportCompanyNames: string[]
   canManage: boolean
 }) {
   return (
@@ -61,6 +69,7 @@ export function ContainerTransitDetailsBlock({
             key={container.id}
             container={container}
             details={detailsByContainerId[container.id] ?? null}
+            transportCompanyNames={transportCompanyNames}
             canManage={canManage}
           />
         ))}
@@ -72,10 +81,12 @@ export function ContainerTransitDetailsBlock({
 function ContainerTransitRow({
   container,
   details,
+  transportCompanyNames,
   canManage,
 }: {
   container: ContainerForTransit
   details: ContainerTransitDetailsInfo | null
+  transportCompanyNames: string[]
   canManage: boolean
 }) {
   return (
@@ -93,7 +104,11 @@ function ContainerTransitRow({
         )}
       </div>
       {canManage && (
-        <TransitDetailsDialog container={container} details={details} />
+        <TransitDetailsDialog
+          container={container}
+          details={details}
+          transportCompanyNames={transportCompanyNames}
+        />
       )}
     </div>
   )
@@ -102,9 +117,11 @@ function ContainerTransitRow({
 function TransitDetailsDialog({
   container,
   details,
+  transportCompanyNames,
 }: {
   container: ContainerForTransit
   details: ContainerTransitDetailsInfo | null
+  transportCompanyNames: string[]
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -191,11 +208,27 @@ function TransitDetailsDialog({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label>Transporter Name</Label>
-            <Input
+            <Autocomplete
+              items={transportCompanyNames}
               value={transporterName}
-              onChange={(e) => setTransporterName(e.target.value)}
-              placeholder="ABC Logistics Ltd"
-            />
+              onValueChange={setTransporterName}
+              openOnInputClick
+            >
+              <AutocompleteInput placeholder="ABC Logistics Ltd" />
+              <AutocompleteContent
+                emptyMessage={
+                  transporterName.trim()
+                    ? `"${transporterName.trim()}" will be added as a new transporter`
+                    : "Start typing to add a new transporter"
+                }
+              >
+                {(name) => (
+                  <AutocompleteItem key={name} value={name}>
+                    {name}
+                  </AutocompleteItem>
+                )}
+              </AutocompleteContent>
+            </Autocomplete>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">

@@ -306,6 +306,16 @@ model ContainerTransitDetails {
   updatedAt DateTime @updatedAt
 }
 
+// A running list of trucking companies typed into Transit Details, so
+// previously-used names can be picked from a searchable list instead of
+// retyped. Grows organically -- there's no separate "manage transporters"
+// screen, a name is added the first time someone types it.
+model TransportCompany {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
 // -------------------------------------------------------------
 // NOTIFICATIONS & AUDITS
 // -------------------------------------------------------------

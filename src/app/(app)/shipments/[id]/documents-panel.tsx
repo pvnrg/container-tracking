@@ -132,6 +132,7 @@ export function DocumentsPanel({
   stageAgents,
   containers,
   transitDetailsByContainerId,
+  transportCompanyNames,
   canManage,
 }: {
   shipmentId: string
@@ -139,6 +140,7 @@ export function DocumentsPanel({
   stageAgents: Partial<Record<DocumentStage, StageAgentInfo>>
   containers: ContainerForTransit[]
   transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
+  transportCompanyNames: string[]
   canManage: boolean
 }) {
   const stages = Object.values(DocumentStage)
@@ -180,6 +182,7 @@ export function DocumentsPanel({
           agent={stageAgents[stage] ?? null}
           containers={containers}
           transitDetailsByContainerId={transitDetailsByContainerId}
+          transportCompanyNames={transportCompanyNames}
           canManage={canManage}
         />
       ))}
@@ -194,6 +197,7 @@ function StageCard({
   agent,
   containers,
   transitDetailsByContainerId,
+  transportCompanyNames,
   canManage,
 }: {
   shipmentId: string
@@ -202,6 +206,7 @@ function StageCard({
   agent: StageAgentInfo | null
   containers: ContainerForTransit[]
   transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
+  transportCompanyNames: string[]
   canManage: boolean
 }) {
   const documents = allDocuments.filter((d) => d.stage === stage)
@@ -257,6 +262,7 @@ function StageCard({
             <ContainerTransitDetailsBlock
               containers={containers}
               detailsByContainerId={transitDetailsByContainerId}
+              transportCompanyNames={transportCompanyNames}
               canManage={canManage}
             />
           )}
