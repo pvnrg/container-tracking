@@ -225,7 +225,7 @@ function StageCard({
   const [open, setOpen] = useState(status !== "complete")
 
   return (
-    <Card>
+    <Card id={`stage-${stage}`} className="scroll-mt-4">
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <button
           type="button"

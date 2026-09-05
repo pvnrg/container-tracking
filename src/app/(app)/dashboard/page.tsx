@@ -501,7 +501,7 @@ export default async function DashboardPage() {
               {stageSkipAlerts.map(({ id, blNumber, alert }) => (
                 <Link
                   key={id}
-                  href={`/shipments/${id}`}
+                  href={`/shipments/${id}#stage-${alert.incompleteStage}`}
                   className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm hover:bg-muted/50"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
