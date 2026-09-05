@@ -102,6 +102,32 @@ export default async function DashboardPage() {
     { key: "completed", label: "Completed", value: pipelineCompleted, colorClass: "bg-chart-5", icon: CheckCircle2 },
   ]
 
+  const [
+    containerOnVessel,
+    containerAtPort,
+    containerInland,
+    containerCompleted,
+  ] = await Promise.all([
+    prisma.container.count({ where: { status: "ON_VESSEL" } }),
+    prisma.container.count({ where: { status: "DISCHARGED_AT_PORT" } }),
+    prisma.container.count({
+      where: { status: { in: ["IN_TRANSIT_TRUCK", "DELIVERED_WAREHOUSE"] } },
+    }),
+    prisma.container.count({
+      where: { status: { in: ["OFFLOADED", "EMPTY_RETURNED_TO_DEPOT"] } },
+    }),
+  ])
+
+  // Same journey-phase grouping and colors as pipelineItems above, so the
+  // two charts read as directly comparable shipment-level vs.
+  // container-level views of the same pipeline.
+  const containerPipelineItems = [
+    { key: "on-vessel", label: "On Vessel", value: containerOnVessel, colorClass: "bg-chart-1", icon: Ship },
+    { key: "at-port", label: "At Port", value: containerAtPort, colorClass: "bg-chart-3", icon: Anchor },
+    { key: "inland", label: "Inland Transit", value: containerInland, colorClass: "bg-chart-4", icon: Truck },
+    { key: "completed", label: "Completed", value: containerCompleted, colorClass: "bg-chart-5", icon: CheckCircle2 },
+  ]
+
   const stats = [
     {
       label: "Total Shipments",
@@ -264,14 +290,25 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Shipment Pipeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <HorizontalBarChart items={pipelineItems} />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Shipment Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HorizontalBarChart items={pipelineItems} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Container Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HorizontalBarChart items={containerPipelineItems} />
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
