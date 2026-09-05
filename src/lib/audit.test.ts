@@ -70,12 +70,12 @@ describe("describeAuditEntry", () => {
           containerNumber: "MEDU1234567",
           transporterName: "ABC Logistics Ltd",
           truckDetails: "Plate RAD 123A",
-          driverDetails: "John Doe, +250700000000",
+          drivers: "John Doe (+250700000000), Jane Roe",
           journeyStartDate: "01/10/2026",
         },
       })
     ).toBe(
-      "Transit details set for container MEDU1234567: transporter ABC Logistics Ltd, truck Plate RAD 123A, driver John Doe, +250700000000, journey start 01/10/2026."
+      "Transit details set for container MEDU1234567: transporter ABC Logistics Ltd, truck Plate RAD 123A, driver(s) John Doe (+250700000000), Jane Roe, journey start 01/10/2026."
     )
   })
 

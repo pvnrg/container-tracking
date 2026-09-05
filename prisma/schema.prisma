@@ -301,7 +301,6 @@ model ContainerTransitDetails {
   assignmentDate   DateTime?
   loadingDate      DateTime?
   truckDetails     String?
-  driverDetails    String?
   journeyStartDate DateTime?
 
   drivers TransitDriver[]

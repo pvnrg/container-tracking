@@ -51,7 +51,9 @@ export default async function ShipmentDetailPage({
       containers: {
         orderBy: { containerNumber: "asc" },
         include: {
-          transitDetails: true,
+          transitDetails: {
+            include: { drivers: { orderBy: { createdAt: "asc" } } },
+          },
           truckStatusUpdates: {
             include: { createdBy: { select: { name: true } } },
             orderBy: { timestamp: "desc" },

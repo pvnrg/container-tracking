@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Truck } from "lucide-react"
+import { Plus, Trash2, Truck, User } from "lucide-react"
 
 import {
   Autocomplete,
@@ -28,13 +28,19 @@ import { formatDate } from "@/lib/format"
 
 import { upsertContainerTransitDetails } from "./container-transit-actions"
 
+export type TransitDriverInfo = {
+  id: string
+  name: string
+  phone: string | null
+}
+
 export type ContainerTransitDetailsInfo = {
   transporterName: string
   assignmentDate: Date | null
   loadingDate: Date | null
   truckDetails: string | null
-  driverDetails: string | null
   journeyStartDate: Date | null
+  drivers: TransitDriverInfo[]
 }
 
 export type ContainerForTransit = {
@@ -104,34 +110,56 @@ function ContainerTransitRow({
       </div>
 
       {details ? (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-2.5 text-xs sm:grid-cols-3">
-          <TransitField label="Transporter" value={details.transporterName} />
-          <TransitField
-            label="Truck Details"
-            value={details.truckDetails ?? "—"}
-          />
-          <TransitField
-            label="Driver Details"
-            value={details.driverDetails ?? "—"}
-          />
-          <TransitField
-            label="Assignment Date"
-            value={
-              details.assignmentDate ? formatDate(details.assignmentDate) : "—"
-            }
-          />
-          <TransitField
-            label="Loading Date"
-            value={details.loadingDate ? formatDate(details.loadingDate) : "—"}
-          />
-          <TransitField
-            label="Journey Start"
-            value={
-              details.journeyStartDate
-                ? formatDate(details.journeyStartDate)
-                : "—"
-            }
-          />
+        <div className="flex flex-col gap-2.5 border-t pt-2.5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+            <TransitField label="Transporter" value={details.transporterName} />
+            <TransitField
+              label="Truck Details"
+              value={details.truckDetails ?? "—"}
+            />
+            <TransitField
+              label="Assignment Date"
+              value={
+                details.assignmentDate ? formatDate(details.assignmentDate) : "—"
+              }
+            />
+            <TransitField
+              label="Loading Date"
+              value={details.loadingDate ? formatDate(details.loadingDate) : "—"}
+            />
+            <TransitField
+              label="Journey Start"
+              value={
+                details.journeyStartDate
+                  ? formatDate(details.journeyStartDate)
+                  : "—"
+              }
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 text-xs">
+            <span className="text-muted-foreground">Drivers</span>
+            {details.drivers.length === 0 ? (
+              <span className="font-medium text-foreground">—</span>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {details.drivers.map((driver) => (
+                  <div
+                    key={driver.id}
+                    className="flex items-center gap-1.5 font-medium text-foreground"
+                  >
+                    <User className="size-3 shrink-0 text-muted-foreground" />
+                    <span>{driver.name}</span>
+                    {driver.phone && (
+                      <span className="font-normal text-muted-foreground">
+                        · {driver.phone}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <span className="text-xs text-muted-foreground">Not added yet</span>
@@ -149,6 +177,8 @@ function TransitField({ label, value }: { label: string; value: string }) {
   )
 }
 
+type DriverDraft = { name: string; phone: string }
+
 function TransitDetailsDialog({
   container,
   details,
@@ -163,6 +193,9 @@ function TransitDetailsDialog({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const initialDrivers = (): DriverDraft[] =>
+    details?.drivers.map((d) => ({ name: d.name, phone: d.phone ?? "" })) ?? []
+
   const [transporterName, setTransporterName] = useState(
     details?.transporterName ?? ""
   )
@@ -173,19 +206,29 @@ function TransitDetailsDialog({
     toDateInputValue(details?.loadingDate ?? null)
   )
   const [truckDetails, setTruckDetails] = useState(details?.truckDetails ?? "")
-  const [driverDetails, setDriverDetails] = useState(details?.driverDetails ?? "")
   const [journeyStartDate, setJourneyStartDate] = useState(
     toDateInputValue(details?.journeyStartDate ?? null)
   )
+  const [drivers, setDrivers] = useState<DriverDraft[]>(initialDrivers)
 
   const reset = () => {
     setTransporterName(details?.transporterName ?? "")
     setAssignmentDate(toDateInputValue(details?.assignmentDate ?? null))
     setLoadingDate(toDateInputValue(details?.loadingDate ?? null))
     setTruckDetails(details?.truckDetails ?? "")
-    setDriverDetails(details?.driverDetails ?? "")
     setJourneyStartDate(toDateInputValue(details?.journeyStartDate ?? null))
+    setDrivers(initialDrivers())
     setError(null)
+  }
+
+  const updateDriver = (index: number, field: keyof DriverDraft, value: string) => {
+    setDrivers((prev) =>
+      prev.map((d, i) => (i === index ? { ...d, [field]: value } : d))
+    )
+  }
+
+  const removeDriver = (index: number) => {
+    setDrivers((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleSave = async () => {
@@ -194,6 +237,14 @@ function TransitDetailsDialog({
       setError("Transporter name is required")
       return
     }
+    const cleanedDrivers = drivers
+      .map((d) => ({ name: d.name.trim(), phone: d.phone.trim() }))
+      .filter((d) => d.name || d.phone)
+    if (cleanedDrivers.some((d) => !d.name)) {
+      setError("Each driver needs a name")
+      return
+    }
+
     setIsSaving(true)
     try {
       await upsertContainerTransitDetails({
@@ -202,8 +253,11 @@ function TransitDetailsDialog({
         assignmentDate: assignmentDate || undefined,
         loadingDate: loadingDate || undefined,
         truckDetails: truckDetails.trim() || undefined,
-        driverDetails: driverDetails.trim() || undefined,
         journeyStartDate: journeyStartDate || undefined,
+        drivers: cleanedDrivers.map((d) => ({
+          name: d.name,
+          phone: d.phone || undefined,
+        })),
       })
       toast.success("Transit details saved")
       setOpen(false)
@@ -235,7 +289,7 @@ function TransitDetailsDialog({
         <DialogHeader>
           <DialogTitle>Transit Details — {container.containerNumber}</DialogTitle>
           <DialogDescription>
-            Record the transporter, truck, and driver assigned to this
+            Record the transporter, truck, and driver(s) assigned to this
             container&apos;s road leg.
           </DialogDescription>
         </DialogHeader>
@@ -299,13 +353,48 @@ function TransitDetailsDialog({
               onChange={(e) => setTruckDetails(e.target.value)}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Driver Details</Label>
-            <Textarea
-              placeholder="Driver name, phone number..."
-              value={driverDetails}
-              onChange={(e) => setDriverDetails(e.target.value)}
-            />
+
+          <div className="flex flex-col gap-2">
+            <Label>Drivers</Label>
+            {drivers.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {drivers.map((driver, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <Input
+                      value={driver.name}
+                      onChange={(e) => updateDriver(index, "name", e.target.value)}
+                      placeholder="Driver name"
+                      className="flex-1"
+                    />
+                    <Input
+                      value={driver.phone}
+                      onChange={(e) => updateDriver(index, "phone", e.target.value)}
+                      placeholder="Phone number"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => removeDriver(index)}
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="self-start"
+              onClick={() => setDrivers((prev) => [...prev, { name: "", phone: "" }])}
+            >
+              <Plus data-icon="inline-start" />
+              Add Driver
+            </Button>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

@@ -109,7 +109,7 @@ export function describeAuditEntry(entry: {
     case "STAGE_AGENT_SET":
       return `Agent for ${newV.stageLabel ?? ""} set to ${newV.name ?? ""}${newV.position ? ` (${newV.position})` : ""}, contact ${newV.contact ?? "—"}.`
     case "ROAD_TRANSIT_DETAILS_SET":
-      return `Transit details set for container ${newV.containerNumber ?? "—"}: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, driver ${newV.driverDetails ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
+      return `Transit details set for container ${newV.containerNumber ?? "—"}: transporter ${newV.transporterName ?? "—"}, truck ${newV.truckDetails ?? "—"}, driver(s) ${newV.drivers ?? "—"}, journey start ${newV.journeyStartDate ?? "—"}.`
     case "TRUCK_STATUS_UPDATE_ADDED":
       return `Truck status update for container ${newV.containerNumber ?? "—"}: ${newV.location ?? "—"} at ${newV.timestamp ?? "—"}.${newV.notes ? ` Notes: "${newV.notes}"` : ""}`
     case "TRUCK_STATUS_UPDATE_DELETED":
