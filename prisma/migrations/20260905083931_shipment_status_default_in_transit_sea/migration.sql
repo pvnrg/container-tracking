@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Shipment" ALTER COLUMN "status" SET DEFAULT 'IN_TRANSIT_SEA';

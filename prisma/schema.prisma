@@ -141,7 +141,7 @@ model Shipment {
   taxAmount     Decimal?  @db.Decimal(12, 2)
   taxCurrency   String?   @default("USD")
 
-  status ShipmentStatus @default(SHIPPED_ON_BOARD)
+  status ShipmentStatus @default(IN_TRANSIT_SEA)
 
   // Transporter Commercial Details
   transporterId        String?
