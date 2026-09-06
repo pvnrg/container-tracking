@@ -28,9 +28,11 @@ import {
   SHIPMENT_STATUS_BADGE_CLASSES,
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
+import { buildShipmentTimeline, type StatusChangeEvent } from "@/lib/shipment-timeline"
 
 import { DocumentsPanel } from "./documents-panel"
 import { GeneralDocumentsPanel } from "./general-documents-panel"
+import { ShipmentTimelineCard } from "./shipment-timeline"
 import { TaxPaymentCard } from "./tax-payment-card"
 import { ShipmentDeleteButton } from "../shipment-delete-button"
 import { ShipmentEditDialog } from "../shipment-edit-dialog"
@@ -120,6 +122,27 @@ export default async function ShipmentDetailPage({
     (d): d is typeof d & { stage: DocumentStage; type: DocumentType } =>
       d.stage !== null && d.type !== null
   )
+
+  const statusEvents = shipment.auditLogs
+    .filter(
+      (e): e is typeof e & { action: "STATUS_UPDATED" | "STATUS_AUTO_UPDATED" } =>
+        e.action === "STATUS_UPDATED" || e.action === "STATUS_AUTO_UPDATED"
+    )
+    .map(
+      (e): StatusChangeEvent => ({
+        createdAt: e.createdAt,
+        action: e.action,
+        oldValue: e.oldValue,
+        newValue: e.newValue,
+      })
+    )
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+
+  const timelineSegments = buildShipmentTimeline({
+    createdAt: shipment.createdAt,
+    currentStatus: shipment.status,
+    statusEvents,
+  })
   const generalDocuments = shipment.documents.filter((d) => d.stage === null)
 
   const detailGroups: {
@@ -234,6 +257,8 @@ export default async function ShipmentDetailPage({
           )}
         </div>
       </div>
+
+      <ShipmentTimelineCard segments={timelineSegments} currentStatus={shipment.status} />
 
       <Card>
         <CardHeader>
