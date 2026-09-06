@@ -3,9 +3,11 @@ import {
   Activity,
   AlertTriangle,
   Anchor,
+  CalendarClock,
   CheckCircle2,
   CircleCheck,
   ClipboardList,
+  Container,
   FileWarning,
   Flame,
   OctagonAlert,
@@ -186,21 +188,21 @@ export default async function DashboardPage() {
       label: "Total Shipments",
       value: total,
       icon: Package,
-      iconClass: "text-sky-600 dark:text-sky-400",
+      iconClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
       href: "/shipments",
     },
     {
       label: "Active",
       value: active,
       icon: Activity,
-      iconClass: "text-indigo-600 dark:text-indigo-400",
+      iconClass: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
       href: "/shipments?status=active",
     },
     {
       label: "In-Transit (Ocean)",
       value: inTransit,
       icon: Ship,
-      iconClass: "text-violet-600 dark:text-violet-400",
+      iconClass: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
       href: "/shipments?status=IN_TRANSIT_SEA",
     },
     {
@@ -210,7 +212,7 @@ export default async function DashboardPage() {
       label: "At Port of Discharge",
       value: shipmentsAtPort.length,
       icon: Anchor,
-      iconClass: "text-amber-600 dark:text-amber-400",
+      iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
       href: "/shipments?status=at-port",
     },
     {
@@ -220,14 +222,14 @@ export default async function DashboardPage() {
       label: "Inland Transit",
       value: shipmentsInland.length,
       icon: Truck,
-      iconClass: "text-purple-600 dark:text-purple-400",
+      iconClass: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
       href: "/shipments?status=inland-transit",
     },
     {
       label: "Completed",
       value: completed,
       icon: CheckCircle2,
-      iconClass: "text-emerald-600 dark:text-emerald-400",
+      iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
       href: "/shipments?status=COMPLETED",
     },
   ]
@@ -419,12 +421,21 @@ export default async function DashboardPage() {
           <Link
             key={s.label}
             href={s.href}
-            className="flex flex-col gap-2 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40"
+            className="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40"
           >
-            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <s.icon className={cn("size-3.5 shrink-0", s.iconClass)} />
-              <span className="truncate">{s.label}</span>
-            </span>
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full",
+                  s.iconClass
+                )}
+              >
+                <s.icon className="size-4" />
+              </div>
+              <span className="truncate text-xs font-medium text-muted-foreground">
+                {s.label}
+              </span>
+            </div>
             <span className="text-3xl font-bold tabular-nums">{s.value}</span>
           </Link>
         ))}
@@ -433,10 +444,17 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Shipment Pipeline</CardTitle>
-            <CardDescription>
-              {total} shipment{total === 1 ? "" : "s"} total
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400">
+                <Ship className="size-4.5" />
+              </div>
+              <div>
+                <CardTitle>Shipment Pipeline</CardTitle>
+                <CardDescription>
+                  {total} shipment{total === 1 ? "" : "s"} total
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <HorizontalBarChart items={pipelineItems} />
@@ -445,22 +463,29 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Container Pipeline</CardTitle>
-            <CardDescription>
-              {containersOnVessel.length +
-                containersAtPort.length +
-                containersInland.length +
-                containersCompleted.length}{" "}
-              container
-              {containersOnVessel.length +
-                containersAtPort.length +
-                containersInland.length +
-                containersCompleted.length ===
-              1
-                ? ""
-                : "s"}{" "}
-              total
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-400">
+                <Container className="size-4.5" />
+              </div>
+              <div>
+                <CardTitle>Container Pipeline</CardTitle>
+                <CardDescription>
+                  {containersOnVessel.length +
+                    containersAtPort.length +
+                    containersInland.length +
+                    containersCompleted.length}{" "}
+                  container
+                  {containersOnVessel.length +
+                    containersAtPort.length +
+                    containersInland.length +
+                    containersCompleted.length ===
+                  1
+                    ? ""
+                    : "s"}{" "}
+                  total
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <HorizontalBarChart items={containerPipelineItems} />
@@ -583,7 +608,12 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Demurrage Risk Monitor</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-400">
+                <Timer className="size-4.5" />
+              </div>
+              <CardTitle>Demurrage Risk Monitor</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <HorizontalBarChart items={detentionRiskItems} />
@@ -641,7 +671,12 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Arrivals</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-400">
+                <CalendarClock className="size-4.5" />
+              </div>
+              <CardTitle>Upcoming Arrivals</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {upcomingShipments.length === 0 ? (
