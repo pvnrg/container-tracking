@@ -112,7 +112,7 @@ export const ALLOWED_DOCUMENT_MIME_TYPES = [
 export const MAX_DOCUMENT_SIZE_BYTES = 15 * 1024 * 1024
 
 export const DOCUMENT_STATUS_BADGE_CLASSES = {
-  missing: "border-border text-muted-foreground",
+  missing: "border-red-600/30 bg-red-500/10 text-red-700 dark:text-red-400",
   uploaded: "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   verified:
     "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",

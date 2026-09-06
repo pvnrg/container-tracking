@@ -5,17 +5,20 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { DocumentStage, DocumentType } from "@prisma/client"
 import {
+  Anchor,
   CheckCircle2,
   ChevronDown,
   CircleCheck,
-  CircleDashed,
   Download,
   Eye,
   File,
   FileImage,
   FileQuestion,
   FileText,
+  Flag,
+  PackageSearch,
   Trash2,
+  Truck,
   Upload,
 } from "lucide-react"
 
@@ -97,16 +100,50 @@ const STAGE_PROGRESS_CLASSES: Record<StageStatus, string> = {
   pending: "border-border bg-muted/30 text-muted-foreground",
 }
 
-const STAGE_PROGRESS_ICONS: Record<StageStatus, typeof CheckCircle2> = {
-  complete: CheckCircle2,
-  partial: CircleDashed,
-  pending: CircleDashed,
+const STAGE_PROGRESS_TEXT_CLASSES: Record<StageStatus, string> = {
+  complete: "text-emerald-700 dark:text-emerald-400",
+  partial: "text-amber-700 dark:text-amber-400",
+  pending: "text-muted-foreground",
 }
 
 const STAGE_PROGRESS_TEXT: Record<StageStatus, string> = {
   complete: "Complete",
   partial: "In progress",
   pending: "Not started",
+}
+
+// Gives each of the 4 stages its own identity color (icon + left-edge
+// accent on its card), independent of completion status -- status keeps
+// its own green/amber/muted signal (STAGE_PROGRESS_CLASSES) on top of this,
+// so the two read as separate dimensions: "which stage" vs. "how far along."
+const STAGE_THEME: Record<
+  DocumentStage,
+  { icon: typeof PackageSearch; iconClasses: string; chipClasses: string; borderClass: string }
+> = {
+  ENTRY_LEVEL: {
+    icon: PackageSearch,
+    iconClasses: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+    chipClasses: "border-sky-600/20 bg-sky-500/5",
+    borderClass: "border-l-sky-500",
+  },
+  PORT_CLEARANCE: {
+    icon: Anchor,
+    iconClasses: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
+    chipClasses: "border-violet-600/20 bg-violet-500/5",
+    borderClass: "border-l-violet-500",
+  },
+  ROAD_TRANSIT: {
+    icon: Truck,
+    iconClasses: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+    chipClasses: "border-amber-600/20 bg-amber-500/5",
+    borderClass: "border-l-amber-500",
+  },
+  FINAL_CLEARANCE: {
+    icon: Flag,
+    iconClasses: "bg-teal-500/15 text-teal-700 dark:text-teal-400",
+    chipClasses: "border-teal-600/20 bg-teal-500/5",
+    borderClass: "border-l-teal-500",
+  },
 }
 
 // `allDocuments` must include every stage's documents, not just this one --
@@ -173,21 +210,33 @@ export function DocumentsPanel({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stages.map((stage) => {
           const status = getStageStatus(stage, documents, rateSheetFinalized)
-          const Icon = STAGE_PROGRESS_ICONS[status]
+          const theme = STAGE_THEME[stage]
+          const Icon = status === "complete" ? CheckCircle2 : theme.icon
           return (
             <div
               key={stage}
               className={cn(
                 "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
-                STAGE_PROGRESS_CLASSES[status]
+                theme.chipClasses
               )}
             >
-              <Icon className="size-4 shrink-0" />
+              <div
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full",
+                  status === "complete"
+                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                    : theme.iconClasses
+                )}
+              >
+                <Icon className="size-4" />
+              </div>
               <div className="flex min-w-0 flex-col">
                 <span className="truncate text-xs opacity-80">
                   {DOCUMENT_STAGE_LABELS[stage].replace(/^Stage \d: /, "")}
                 </span>
-                <span className="font-medium">{STAGE_PROGRESS_TEXT[status]}</span>
+                <span className={cn("font-medium", STAGE_PROGRESS_TEXT_CLASSES[status])}>
+                  {STAGE_PROGRESS_TEXT[status]}
+                </span>
               </div>
             </div>
           )
@@ -250,22 +299,29 @@ function StageCard({
   const note = DOCUMENT_STAGE_NOTES[stage] ?? finalClearanceNote(stage, allDocuments)
   const status = getStageStatus(stage, allDocuments, rateSheet?.finalizedAt != null)
   const [open, setOpen] = useState(status !== "complete")
+  const theme = STAGE_THEME[stage]
+  const StageIcon = theme.icon
 
   return (
-    <Card id={`stage-${stage}`} className="scroll-mt-4">
+    <Card
+      id={`stage-${stage}`}
+      className={cn("scroll-mt-4 border-l-4", theme.borderClass)}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-start gap-2 text-left"
+          className="flex min-w-0 flex-1 items-start gap-3 text-left"
           aria-expanded={open}
         >
-          <ChevronDown
+          <div
             className={cn(
-              "mt-1 size-4 shrink-0 text-muted-foreground transition-transform",
-              open && "rotate-180"
+              "flex size-9 shrink-0 items-center justify-center rounded-full",
+              theme.iconClasses
             )}
-          />
+          >
+            <StageIcon className="size-4.5" />
+          </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-base">{DOCUMENT_STAGE_LABELS[stage]}</CardTitle>
@@ -275,6 +331,12 @@ function StageCard({
             </div>
             {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
           </div>
+          <ChevronDown
+            className={cn(
+              "mt-1.5 ml-auto size-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180"
+            )}
+          />
         </button>
         {canManage && (
           <UploadDocumentDialog
