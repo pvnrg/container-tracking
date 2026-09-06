@@ -57,6 +57,31 @@ export async function confirmContainerOffload(containerId: string) {
   if (!container) {
     throw new Error("Container not found")
   }
+  if (container.actualOffloadedAt) {
+    throw new Error("Container is already offloaded")
+  }
+
+  // Only one container per shipment can be offloaded at a time. A container
+  // is "in progress" once it has a scheduled offload date and hasn't been
+  // confirmed yet; among a shipment's in-progress containers, the
+  // earliest-scheduled one is the only one that may be confirmed next --
+  // everyone else has to wait their turn. If nothing is in progress yet
+  // (nobody has scheduled anything), confirming directly is still allowed,
+  // matching the pre-existing single-container behavior.
+  const inProgress = await prisma.container.findMany({
+    where: {
+      shipmentId: container.shipmentId,
+      offloadScheduledAt: { not: null },
+      actualOffloadedAt: null,
+    },
+    orderBy: [{ offloadScheduledAt: "asc" }, { createdAt: "asc" }],
+    select: { id: true, containerNumber: true },
+  })
+  if (inProgress.length > 0 && inProgress[0].id !== containerId) {
+    throw new Error(
+      `Only one container can be offloaded at a time for this shipment. Confirm ${inProgress[0].containerNumber} first.`
+    )
+  }
 
   const now = new Date()
 

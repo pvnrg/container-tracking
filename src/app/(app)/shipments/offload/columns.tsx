@@ -28,6 +28,12 @@ export type OffloadContainer = {
   status: ContainerStatus
   offloadScheduledAt: Date | null
   actualOffloadedAt: Date | null
+  // Set when another container in the same shipment is already scheduled
+  // and awaiting confirmation -- only one container per shipment can be
+  // offloaded at a time, so this container's Confirm action is disabled
+  // until that one is confirmed. See confirmContainerOffload's matching
+  // server-side guard.
+  blockedByContainerNumber: string | null
   shipment: {
     id: string
     blNumber: string
@@ -178,6 +184,20 @@ function ConfirmCell({ container }: { container: OffloadContainer }) {
 
   if (container.actualOffloadedAt) {
     return <span className="text-sm">{formatDateTime(container.actualOffloadedAt)}</span>
+  }
+
+  if (container.blockedByContainerNumber) {
+    return (
+      <div className="flex flex-col gap-1">
+        <Button type="button" size="sm" disabled>
+          <PackageCheck data-icon="inline-start" />
+          Confirm Offload
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          Waiting on {container.blockedByContainerNumber} to be offloaded first
+        </span>
+      </div>
+    )
   }
 
   return (
