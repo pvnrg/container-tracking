@@ -362,7 +362,7 @@ model Notification {
   userId     String
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   shipmentId String?
-  shipment   Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   title   String
   message String

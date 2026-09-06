@@ -103,8 +103,8 @@ export async function deleteShipment(shipmentId: string) {
     throw new Error("Shipment not found")
   }
 
-  // Cascades to containers, detention trackers, documents, and audit logs
-  // (see the onDelete: Cascade relations in schema.prisma).
+  // Cascades to containers, detention trackers, documents, audit logs, and
+  // notifications (see the onDelete: Cascade relations in schema.prisma).
   await prisma.shipment.delete({ where: { id: shipmentId } })
   await deleteShipmentFiles(shipmentId).catch(() => {})
 
