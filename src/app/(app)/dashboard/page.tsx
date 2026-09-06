@@ -467,10 +467,13 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <Card id="document-stage-alerts">
+      <Card
+        id="document-stage-alerts"
+        className="border-red-600/50 dark:border-red-500/50"
+      >
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-400">
+            <div className="flex size-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm shadow-red-600/30">
               <FileWarning className="size-4.5" />
             </div>
             <div>
@@ -483,7 +486,7 @@ export default async function DashboardPage() {
           </div>
           {stageSkipAlerts.length > 0 && (
             <CardAction>
-              <Badge className="bg-orange-600 text-white dark:bg-orange-500">
+              <Badge className="bg-red-700 text-white dark:bg-red-600">
                 {stageSkipAlerts.length}
               </Badge>
             </CardAction>
@@ -502,7 +505,7 @@ export default async function DashboardPage() {
                 <Link
                   key={id}
                   href={`/shipments/${id}#stage-${alert.incompleteStage}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm hover:bg-muted/50"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-red-600/40 bg-red-50 px-3 py-2 text-sm hover:bg-red-100 dark:border-red-500/40 dark:bg-red-950/40 dark:hover:bg-red-950/60"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="font-medium">{blNumber}</span>
@@ -510,10 +513,7 @@ export default async function DashboardPage() {
                       {describeStageSkipAlert(alert)}
                     </span>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="shrink-0 border-orange-600/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
-                  >
+                  <Badge className="shrink-0 bg-red-600 text-white dark:bg-red-600">
                     {stageSkipBadgeLabel(alert)}
                   </Badge>
                 </Link>
