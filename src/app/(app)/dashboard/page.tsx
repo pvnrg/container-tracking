@@ -41,6 +41,7 @@ import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
+  AT_PORT_STATUSES,
   DISCHARGE_PORT_LABELS,
   INLAND_TRANSIT_STATUSES,
 } from "@/lib/shipment-labels"
@@ -55,7 +56,6 @@ export default async function DashboardPage() {
   const [
     total,
     inTransit,
-    atPort,
     completed,
     active,
     overdueEtas,
@@ -63,7 +63,6 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     prisma.shipment.count(),
     prisma.shipment.count({ where: { status: "IN_TRANSIT_SEA" } }),
-    prisma.shipment.count({ where: { status: "ARRIVED_PORT_OF_DISCHARGE" } }),
     prisma.shipment.count({ where: { status: "COMPLETED" } }),
     prisma.shipment.count({ where: { status: { not: "COMPLETED" } } }),
     prisma.shipment.count({
@@ -90,11 +89,7 @@ export default async function DashboardPage() {
         // ready to load, the cargo is still physically at the port until
         // it's actually LOADED_ROAD_TRANSIT, matching where its containers
         // sit in the Container Pipeline (still DISCHARGED_AT_PORT).
-        where: {
-          status: {
-            in: ["ARRIVED_PORT_OF_DISCHARGE", "CUSTOMS_PROCESSING", "CUSTOMS_CLEARED"],
-          },
-        },
+        where: { status: { in: AT_PORT_STATUSES } },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
@@ -209,11 +204,14 @@ export default async function DashboardPage() {
       href: "/shipments?status=IN_TRANSIT_SEA",
     },
     {
+      // Same shipmentsAtPort query that feeds the Shipment Pipeline chart's
+      // "At Port / Customs" bucket below, so this tile can never drift out
+      // of sync with it.
       label: "At Port of Discharge",
-      value: atPort,
+      value: shipmentsAtPort.length,
       icon: Anchor,
       iconClass: "text-amber-600 dark:text-amber-400",
-      href: "/shipments?status=ARRIVED_PORT_OF_DISCHARGE",
+      href: "/shipments?status=at-port",
     },
     {
       // Same shipmentsInland query that feeds the Shipment Pipeline chart's

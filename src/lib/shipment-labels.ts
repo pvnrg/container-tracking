@@ -44,6 +44,18 @@ export const ARRIVED_OR_LATER_STATUSES: ShipmentStatus[] = [
   "COMPLETED",
 ]
 
+// Statuses where cargo has been discharged at the seaport but hasn't yet
+// physically left on a truck -- CUSTOMS_CLEARED is included here (not in
+// INLAND_TRANSIT_STATUSES below), since "ready to load" still means the
+// containers sit at DISCHARGED_AT_PORT. Shared by the dashboard's At Port
+// of Discharge KPI/pipeline bucket and the shipments list filter of the
+// same name, so both always agree.
+export const AT_PORT_STATUSES: ShipmentStatus[] = [
+  "ARRIVED_PORT_OF_DISCHARGE",
+  "CUSTOMS_PROCESSING",
+  "CUSTOMS_CLEARED",
+]
+
 // Statuses where the cargo has actually left the port and is moving (or has
 // arrived) inland -- CUSTOMS_CLEARED is deliberately excluded, since that
 // only means "ready to load," not yet physically on the road (its

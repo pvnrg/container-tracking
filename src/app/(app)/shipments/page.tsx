@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
+  AT_PORT_STATUSES,
   INLAND_TRANSIT_STATUSES,
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
@@ -18,6 +19,7 @@ const FILTER_LABELS: Record<string, string> = {
   active: "Active",
   overdue: "Overdue ETAs",
   "docs-pending": "Pending Doc. Verifications",
+  "at-port": "At Port of Discharge",
   "inland-transit": "Inland Transit",
   ...SHIPMENT_STATUS_LABELS,
 }
@@ -33,6 +35,8 @@ function buildWhere(status: string | undefined): Prisma.ShipmentWhereInput {
       }
     case "docs-pending":
       return { documents: { some: { isVerified: false } } }
+    case "at-port":
+      return { status: { in: AT_PORT_STATUSES } }
     case "inland-transit":
       return { status: { in: INLAND_TRANSIT_STATUSES } }
     case undefined:
