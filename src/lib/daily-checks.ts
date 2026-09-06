@@ -1,11 +1,28 @@
 import { logShipmentAudit } from "@/lib/audit"
 import { ensureDetentionTrackers } from "@/lib/detention-trackers"
+import {
+  describeStageSkipAlert,
+  findStageSkipAlert,
+} from "@/lib/document-stage-alerts"
 import { createNotification } from "@/lib/notifications"
 import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
   SHIPMENT_STATUS_LABELS,
 } from "@/lib/shipment-labels"
+import { getStage2Gaps, STAGE2_GAP_LABELS } from "@/lib/stage2-readiness"
+
+// Matches the dashboard's "Needs Attention" labels for these same two
+// conditions (src/app/(app)/dashboard/page.tsx) -- also doubles as the
+// de-dup key below, so don't change one without the other.
+const STAGE_SKIP_NOTIFICATION_TITLE = "Out-of-Order Paperwork"
+const STAGE2_GAP_NOTIFICATION_TITLE = "Stage 2 Details Needed"
+
+function startOfToday() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
 
 // Once a shipment's ETA has passed while it's still shown as at sea, treat
 // it as having reached the discharge port -- there's no separate "vessel
@@ -175,12 +192,155 @@ async function runDetentionEscalations() {
   return { trackersEscalated, messagesSent }
 }
 
+// Pushes the dashboard's "Out-of-Order Paperwork" alert (later-stage
+// documents uploaded while an earlier stage is still incomplete) to ops
+// instead of leaving it something someone only sees by opening the
+// dashboard. At most one notification per shipment per day -- the
+// condition can persist for a while, so this acts as a daily reminder
+// until it's resolved, not a one-time ping.
+async function runStageSkipAlertNotifications() {
+  const shipments = await prisma.shipment.findMany({
+    where: { status: { not: "COMPLETED" } },
+    select: {
+      id: true,
+      blNumber: true,
+      documents: { select: { stage: true, type: true, isVerified: true } },
+      transitRateSheet: { select: { finalizedAt: true } },
+    },
+  })
+
+  const alerts = shipments
+    .map((s) => {
+      const alert = findStageSkipAlert(s.documents, {
+        rateSheetFinalized: s.transitRateSheet?.finalizedAt != null,
+      })
+      return alert ? { id: s.id, blNumber: s.blNumber, alert } : null
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null)
+
+  if (alerts.length === 0) {
+    return { shipmentsNotified: 0, messagesSent: 0 }
+  }
+
+  const opsUsers = await prisma.user.findMany({
+    where: { isActive: true, role: { in: ["ADMIN", "LOGISTICS_OPERATOR"] } },
+    select: { id: true },
+  })
+
+  const dayStart = startOfToday()
+  let messagesSent = 0
+  let shipmentsNotified = 0
+
+  for (const { id, blNumber, alert } of alerts) {
+    const alreadySentToday = await prisma.notification.findFirst({
+      where: {
+        shipmentId: id,
+        title: STAGE_SKIP_NOTIFICATION_TITLE,
+        createdAt: { gte: dayStart },
+      },
+      select: { id: true },
+    })
+    if (alreadySentToday) continue
+
+    for (const user of opsUsers) {
+      await createNotification({
+        userId: user.id,
+        shipmentId: id,
+        title: STAGE_SKIP_NOTIFICATION_TITLE,
+        message: `${blNumber}: ${describeStageSkipAlert(alert)}`,
+      })
+      messagesSent++
+    }
+    shipmentsNotified++
+  }
+
+  return { shipmentsNotified, messagesSent }
+}
+
+// Pushes the dashboard's "Stage 2 Details Needed" alert (shipments arrived
+// at the discharge port still missing a clearing agent, customs
+// declaration, or container transit details) the same way -- at most one
+// notification per shipment per day.
+async function runStage2GapNotifications() {
+  const arrivedShipments = await prisma.shipment.findMany({
+    where: { status: "ARRIVED_PORT_OF_DISCHARGE" },
+    select: {
+      id: true,
+      blNumber: true,
+      stageAgents: { where: { stage: "PORT_CLEARANCE" }, select: { id: true } },
+      documents: { where: { stage: "PORT_CLEARANCE" }, select: { id: true } },
+      containers: { select: { transitDetails: { select: { id: true } } } },
+    },
+  })
+
+  const gapsByShipment = arrivedShipments
+    .map((s) => ({
+      id: s.id,
+      blNumber: s.blNumber,
+      gaps: getStage2Gaps({
+        hasAgent: s.stageAgents.length > 0,
+        hasCustomsDocument: s.documents.length > 0,
+        allContainersHaveTransitDetails: s.containers.every(
+          (c) => c.transitDetails !== null
+        ),
+      }),
+    }))
+    .filter((s) => s.gaps.length > 0)
+
+  if (gapsByShipment.length === 0) {
+    return { shipmentsNotified: 0, messagesSent: 0 }
+  }
+
+  const opsUsers = await prisma.user.findMany({
+    where: { isActive: true, role: { in: ["ADMIN", "LOGISTICS_OPERATOR"] } },
+    select: { id: true },
+  })
+
+  const dayStart = startOfToday()
+  let messagesSent = 0
+  let shipmentsNotified = 0
+
+  for (const { id, blNumber, gaps } of gapsByShipment) {
+    const alreadySentToday = await prisma.notification.findFirst({
+      where: {
+        shipmentId: id,
+        title: STAGE2_GAP_NOTIFICATION_TITLE,
+        createdAt: { gte: dayStart },
+      },
+      select: { id: true },
+    })
+    if (alreadySentToday) continue
+
+    const gapLabels = gaps.map((g) => STAGE2_GAP_LABELS[g]).join(", ")
+    for (const user of opsUsers) {
+      await createNotification({
+        userId: user.id,
+        shipmentId: id,
+        title: STAGE2_GAP_NOTIFICATION_TITLE,
+        message: `${blNumber} arrived at the discharge port but is still missing: ${gapLabels}.`,
+      })
+      messagesSent++
+    }
+    shipmentsNotified++
+  }
+
+  return { shipmentsNotified, messagesSent }
+}
+
 export async function runDailyChecks() {
   // Runs first so a shipment whose ETA has just passed is no longer
   // considered "at sea" by the time the 7-day broadcast below queries for it.
   const etaArrivalAutoAdvance = await runEtaArrivalAutoAdvance()
   const sevenDayBroadcast = await runSevenDayBroadcast()
   const detentionEscalations = await runDetentionEscalations()
+  const stageSkipAlerts = await runStageSkipAlertNotifications()
+  const stage2GapAlerts = await runStage2GapNotifications()
 
-  return { etaArrivalAutoAdvance, sevenDayBroadcast, detentionEscalations }
+  return {
+    etaArrivalAutoAdvance,
+    sevenDayBroadcast,
+    detentionEscalations,
+    stageSkipAlerts,
+    stage2GapAlerts,
+  }
 }
