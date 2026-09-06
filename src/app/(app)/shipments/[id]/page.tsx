@@ -66,6 +66,9 @@ export default async function ShipmentDetailPage({
         orderBy: { createdAt: "desc" },
       },
       stageAgents: true,
+      transitRateSheet: {
+        include: { lineItems: { orderBy: { sortOrder: "asc" } } },
+      },
       auditLogs: {
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
@@ -93,6 +96,18 @@ export default async function ShipmentDetailPage({
   const truckStatusUpdatesByContainerId = Object.fromEntries(
     shipment.containers.map((c) => [c.id, c.truckStatusUpdates])
   )
+
+  const rateSheet = shipment.transitRateSheet
+    ? {
+        invoiceNumber: shipment.transitRateSheet.invoiceNumber,
+        currency: shipment.transitRateSheet.currency,
+        finalizedAt: shipment.transitRateSheet.finalizedAt,
+        lineItems: shipment.transitRateSheet.lineItems.map((li) => ({
+          description: li.description,
+          amount: li.amount.toString(),
+        })),
+      }
+    : null
 
   const transportCompanies = canManageDocuments
     ? await prisma.transportCompany.findMany({
@@ -304,12 +319,16 @@ export default async function ShipmentDetailPage({
 
       <DocumentsPanel
         shipmentId={shipment.id}
+        blNumber={shipment.blNumber}
+        shipperName={shipment.shipperName}
+        consigneeName={shipment.consigneeName}
         documents={structuredDocuments}
         stageAgents={stageAgents}
         containers={shipment.containers}
         transitDetailsByContainerId={transitDetailsByContainerId}
         transportCompanyNames={transportCompanies.map((t) => t.name)}
         truckStatusUpdatesByContainerId={truckStatusUpdatesByContainerId}
+        rateSheet={rateSheet}
         canManage={canManageDocuments}
       />
 

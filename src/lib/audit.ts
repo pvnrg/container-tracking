@@ -19,6 +19,8 @@ export type AuditAction =
   | "TRUCK_STATUS_UPDATE_ADDED"
   | "TRUCK_STATUS_UPDATE_DELETED"
   | "STATUS_AUTO_UPDATED"
+  | "RATE_SHEET_FINALIZED"
+  | "RATE_SHEET_REOPENED"
 
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   SHIPMENT_CREATED: "Shipment Created",
@@ -37,6 +39,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   TRUCK_STATUS_UPDATE_ADDED: "Truck Status Update Added",
   TRUCK_STATUS_UPDATE_DELETED: "Truck Status Update Deleted",
   STATUS_AUTO_UPDATED: "Status Auto-Updated",
+  RATE_SHEET_FINALIZED: "Transit Rate Sheet Finalized",
+  RATE_SHEET_REOPENED: "Transit Rate Sheet Reopened",
 }
 
 /**
@@ -114,6 +118,10 @@ export function describeAuditEntry(entry: {
       return `Truck status update for container ${newV.containerNumber ?? "—"}: ${newV.location ?? "—"} at ${newV.timestamp ?? "—"}.${newV.notes ? ` Notes: "${newV.notes}"` : ""}`
     case "TRUCK_STATUS_UPDATE_DELETED":
       return `Deleted truck status update for container ${oldV.containerNumber ?? "—"}: ${oldV.location ?? "—"} at ${oldV.timestamp ?? "—"}.`
+    case "RATE_SHEET_FINALIZED":
+      return `Transit Rate Sheet finalized: ${newV.currency ?? ""} ${newV.total ?? ""} across ${newV.itemCount ?? 0} line item(s), invoice ${newV.invoiceNumber ?? "—"}.`
+    case "RATE_SHEET_REOPENED":
+      return `Transit Rate Sheet reopened for edits.`
     case "STATUS_AUTO_UPDATED": {
       const trigger = newV.stageLabel
         ? `after ${newV.stageLabel}'s documents were verified`

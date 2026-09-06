@@ -51,7 +51,7 @@ export async function maybeAutoAdvanceStatus({
   shipmentId: string
   userId: string
 }): Promise<ShipmentStatus | null> {
-  const [shipment, docs] = await Promise.all([
+  const [shipment, docs, rateSheet] = await Promise.all([
     prisma.shipment.findUnique({
       where: { id: shipmentId },
       select: { status: true },
@@ -60,6 +60,10 @@ export async function maybeAutoAdvanceStatus({
       where: { shipmentId, stage: { not: null } },
       select: { stage: true, type: true, isVerified: true },
     }),
+    prisma.transitRateSheet.findUnique({
+      where: { shipmentId },
+      select: { finalizedAt: true },
+    }),
   ])
   if (!shipment) return null
 
@@ -67,10 +71,12 @@ export async function maybeAutoAdvanceStatus({
     (d): d is { stage: DocumentStage; type: NonNullable<typeof d.type>; isVerified: boolean } =>
       d.stage !== null && d.type !== null
   )
+  const rateSheetFinalized = rateSheet?.finalizedAt != null
 
   let furthestEligible: ShipmentStatus | null = null
   for (const stage of STAGE_ORDER) {
-    if (!isStageComplete(stage, structuredDocs)) continue
+    const options = stage === "ROAD_TRANSIT" ? { rateSheetFinalized } : undefined
+    if (!isStageComplete(stage, structuredDocs, options)) continue
 
     const target = STAGE_STATUS_MAP[stage]
     if (!furthestEligible || statusIndex(target) > statusIndex(furthestEligible)) {

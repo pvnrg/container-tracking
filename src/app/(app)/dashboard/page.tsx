@@ -307,12 +307,15 @@ export default async function DashboardPage() {
       id: true,
       blNumber: true,
       documents: { select: { stage: true, type: true, isVerified: true } },
+      transitRateSheet: { select: { finalizedAt: true } },
     },
   })
 
   const stageSkipAlerts = shipmentsForDocCheck
     .map((s) => {
-      const alert = findStageSkipAlert(s.documents)
+      const alert = findStageSkipAlert(s.documents, {
+        rateSheetFinalized: s.transitRateSheet?.finalizedAt != null,
+      })
       return alert ? { id: s.id, blNumber: s.blNumber, alert } : null
     })
     .filter((a): a is { id: string; blNumber: string; alert: NonNullable<ReturnType<typeof findStageSkipAlert>> } => a !== null)

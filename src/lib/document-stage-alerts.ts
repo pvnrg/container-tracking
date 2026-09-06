@@ -28,13 +28,26 @@ const STAGE_REQUIRES_ANY: Partial<Record<DocumentStage, boolean>> = {
 
 export type StageDoc = { stage: DocumentStage; type: DocumentType; isVerified: boolean }
 
+export type StageCompletionOptions = {
+  // Finalizing the Stage 3 Transit Rate Sheet (see rate-sheet-actions.ts) is
+  // an alternate way of completing ROAD_TRANSIT, equivalent to verifying a
+  // TRANSPORTER_RATE_AGREEMENT document.
+  rateSheetFinalized?: boolean
+}
+
 /**
  * Whether a stage is fully verified. `documents` should include ALL of the
  * shipment's structured documents (every stage), not just this stage's --
  * FINAL_CLEARANCE's requirement depends on what PORT_CLEARANCE resolved to
  * (see getVisibleDocumentTypes), so it needs visibility into that stage too.
  */
-export function isStageComplete(stage: DocumentStage, documents: StageDoc[]) {
+export function isStageComplete(
+  stage: DocumentStage,
+  documents: StageDoc[],
+  options?: StageCompletionOptions
+) {
+  if (stage === "ROAD_TRANSIT" && options?.rateSheetFinalized) return true
+
   const verifiedTypes = new Set(
     documents.filter((d) => d.isVerified).map((d) => d.type)
   )
@@ -62,14 +75,16 @@ export type StageSkipAlert = {
  * ahead of where the shipment's process actually is.
  */
 export function findStageSkipAlert(
-  documents: { stage: DocumentStage | null; type: DocumentType | null; isVerified: boolean }[]
+  documents: { stage: DocumentStage | null; type: DocumentType | null; isVerified: boolean }[],
+  options?: StageCompletionOptions
 ): StageSkipAlert | null {
   const structured = documents.filter(
     (d): d is StageDoc => d.stage !== null && d.type !== null
   )
 
   const incompleteIndex = STAGE_ORDER.findIndex(
-    (stage) => !isStageComplete(stage, structured)
+    (stage) =>
+      !isStageComplete(stage, structured, stage === "ROAD_TRANSIT" ? options : undefined)
   )
   if (incompleteIndex === -1) return null
 

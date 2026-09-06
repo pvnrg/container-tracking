@@ -60,6 +60,7 @@ import {
   type ContainerTransitDetailsInfo,
 } from "./container-transit-details"
 import { deleteDocument, uploadDocument, verifyDocument } from "./documents-actions"
+import { RateSheetBlock, type RateSheetInfo } from "./rate-sheet"
 import { StageAgentBlock, type StageAgentInfo } from "./stage-agent"
 import {
   TruckStatusUpdatesBlock,
@@ -125,31 +126,45 @@ function finalClearanceNote(
   return undefined
 }
 
-function getStageStatus(stage: DocumentStage, allDocuments: DocumentRow[]): StageStatus {
-  if (isStageComplete(stage, allDocuments)) return "complete"
+function getStageStatus(
+  stage: DocumentStage,
+  allDocuments: DocumentRow[],
+  rateSheetFinalized: boolean
+): StageStatus {
+  const options = stage === "ROAD_TRANSIT" ? { rateSheetFinalized } : undefined
+  if (isStageComplete(stage, allDocuments, options)) return "complete"
   return allDocuments.some((d) => d.stage === stage) ? "partial" : "pending"
 }
 
 export function DocumentsPanel({
   shipmentId,
+  blNumber,
+  shipperName,
+  consigneeName,
   documents,
   stageAgents,
   containers,
   transitDetailsByContainerId,
   transportCompanyNames,
   truckStatusUpdatesByContainerId,
+  rateSheet,
   canManage,
 }: {
   shipmentId: string
+  blNumber: string
+  shipperName: string | null
+  consigneeName: string | null
   documents: DocumentRow[]
   stageAgents: Partial<Record<DocumentStage, StageAgentInfo>>
   containers: ContainerForTransit[]
   transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
   transportCompanyNames: string[]
   truckStatusUpdatesByContainerId: Record<string, TruckStatusUpdateInfo[]>
+  rateSheet: RateSheetInfo | null
   canManage: boolean
 }) {
   const stages = Object.values(DocumentStage)
+  const rateSheetFinalized = rateSheet?.finalizedAt != null
 
   return (
     <div className="flex flex-col gap-4">
@@ -157,7 +172,7 @@ export function DocumentsPanel({
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stages.map((stage) => {
-          const status = getStageStatus(stage, documents)
+          const status = getStageStatus(stage, documents, rateSheetFinalized)
           const Icon = STAGE_PROGRESS_ICONS[status]
           return (
             <div
@@ -183,6 +198,9 @@ export function DocumentsPanel({
         <StageCard
           key={stage}
           shipmentId={shipmentId}
+          blNumber={blNumber}
+          shipperName={shipperName}
+          consigneeName={consigneeName}
           stage={stage}
           allDocuments={documents}
           agent={stageAgents[stage] ?? null}
@@ -190,6 +208,7 @@ export function DocumentsPanel({
           transitDetailsByContainerId={transitDetailsByContainerId}
           transportCompanyNames={transportCompanyNames}
           truckStatusUpdatesByContainerId={truckStatusUpdatesByContainerId}
+          rateSheet={rateSheet}
           canManage={canManage}
         />
       ))}
@@ -199,6 +218,9 @@ export function DocumentsPanel({
 
 function StageCard({
   shipmentId,
+  blNumber,
+  shipperName,
+  consigneeName,
   stage,
   allDocuments,
   agent,
@@ -206,9 +228,13 @@ function StageCard({
   transitDetailsByContainerId,
   transportCompanyNames,
   truckStatusUpdatesByContainerId,
+  rateSheet,
   canManage,
 }: {
   shipmentId: string
+  blNumber: string
+  shipperName: string | null
+  consigneeName: string | null
   stage: DocumentStage
   allDocuments: DocumentRow[]
   agent: StageAgentInfo | null
@@ -216,12 +242,13 @@ function StageCard({
   transitDetailsByContainerId: Record<string, ContainerTransitDetailsInfo>
   transportCompanyNames: string[]
   truckStatusUpdatesByContainerId: Record<string, TruckStatusUpdateInfo[]>
+  rateSheet: RateSheetInfo | null
   canManage: boolean
 }) {
   const documents = allDocuments.filter((d) => d.stage === stage)
   const types = getVisibleDocumentTypes(stage, allDocuments)
   const note = DOCUMENT_STAGE_NOTES[stage] ?? finalClearanceNote(stage, allDocuments)
-  const status = getStageStatus(stage, allDocuments)
+  const status = getStageStatus(stage, allDocuments, rateSheet?.finalizedAt != null)
   const [open, setOpen] = useState(status !== "complete")
 
   return (
@@ -276,11 +303,21 @@ function StageCard({
             />
           )}
           {stage === "ROAD_TRANSIT" && (
-            <TruckStatusUpdatesBlock
-              containers={containers}
-              updatesByContainerId={truckStatusUpdatesByContainerId}
-              canManage={canManage}
-            />
+            <>
+              <TruckStatusUpdatesBlock
+                containers={containers}
+                updatesByContainerId={truckStatusUpdatesByContainerId}
+                canManage={canManage}
+              />
+              <RateSheetBlock
+                shipmentId={shipmentId}
+                blNumber={blNumber}
+                shipperName={shipperName}
+                consigneeName={consigneeName}
+                rateSheet={rateSheet}
+                canManage={canManage}
+              />
+            </>
           )}
           <div className="flex flex-wrap gap-2">
             {types.map((type) => {

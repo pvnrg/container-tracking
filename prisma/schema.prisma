@@ -161,11 +161,12 @@ model Shipment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  containers    Container[]
-  documents     Document[]
-  stageAgents   StageAgent[]
-  notifications Notification[]
-  auditLogs     ShipmentAudit[]
+  containers       Container[]
+  documents        Document[]
+  stageAgents      StageAgent[]
+  notifications    Notification[]
+  auditLogs        ShipmentAudit[]
+  transitRateSheet TransitRateSheet?
 
   @@index([blNumber])
   @@index([status])
@@ -287,6 +288,37 @@ model StageAgent {
   updatedAt DateTime @updatedAt
 
   @@unique([shipmentId, stage])
+}
+
+// Itemized road-transit rates for Stage 3, one per shipment. Finalizing it
+// (setting finalizedAt) is an alternate way of completing ROAD_TRANSIT --
+// equivalent to verifying a TRANSPORTER_RATE_AGREEMENT document -- and is
+// what the Proforma Invoice preview/PDF is generated from. See
+// isStageComplete's rateSheetFinalized option in document-stage-alerts.ts.
+model TransitRateSheet {
+  id            String    @id @default(uuid())
+  shipmentId    String    @unique
+  shipment      Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  invoiceNumber String
+  currency      String    @default("USD")
+  finalizedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lineItems RateLineItem[]
+}
+
+model RateLineItem {
+  id          String           @id @default(uuid())
+  rateSheetId String
+  rateSheet   TransitRateSheet @relation(fields: [rateSheetId], references: [id], onDelete: Cascade)
+
+  description String
+  amount      Decimal @db.Decimal(12, 2)
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
 }
 
 // Road transit dispatch details for Stage 2 (one record per container --
