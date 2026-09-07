@@ -44,6 +44,13 @@ export function toDateInputValue(date: Date) {
   return date.toISOString().slice(0, 10)
 }
 
+// Same UTC-date basis as toDateInputValue, so string comparisons against a
+// draft's currentEta value line up correctly regardless of the viewer's
+// timezone.
+function todayDateInputValue() {
+  return toDateInputValue(new Date())
+}
+
 function formatCountdown(currentEta: Date, status: ShipmentStatus) {
   if (ARRIVED_OR_LATER_STATUSES.includes(status)) {
     return { text: "Arrived", className: "text-muted-foreground" }
@@ -163,8 +170,17 @@ export function createTrackingColumns(
           <Input
             type="date"
             className="w-40"
+            max={todayDateInputValue()}
             value={draft.currentEta}
-            onChange={(e) => setDraft(shipment.id, { currentEta: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value
+              // Belt-and-braces alongside `max` -- some browsers still let a
+              // future date through when it's typed digit-by-digit instead
+              // of picked from the calendar. Only this page's ETA input is
+              // restricted this way for now.
+              if (value && value > todayDateInputValue()) return
+              setDraft(shipment.id, { currentEta: value })
+            }}
           />
         )
       },
