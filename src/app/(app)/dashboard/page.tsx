@@ -78,7 +78,11 @@ export default async function DashboardPage() {
 
   // findMany (not count) for these -- the pipeline charts let you expand a
   // bucket to see exactly which shipments/containers are in it.
-  const shipmentSelect = { id: true, blNumber: true } as const
+  const shipmentSelect = {
+    id: true,
+    blNumber: true,
+    containers: { select: { inventoryReference: true } },
+  } as const
   const [shipmentsAtSea, shipmentsAtPort, shipmentsInland, shipmentsCompleted] =
     await Promise.all([
       prisma.shipment.findMany({
@@ -107,10 +111,27 @@ export default async function DashboardPage() {
       }),
     ])
 
-  const toShipmentDetails = (shipments: { id: string; blNumber: string }[]) =>
+  // Dedupes a shipment's container product names into one short line, e.g.
+  // "Steel Coils, Ceramic Tiles" or "Steel Coils, Ceramic Tiles & 1 more"
+  // once a shipment carries more than a couple of distinct products.
+  const summarizeProducts = (containers: { inventoryReference: string }[]) => {
+    const names = Array.from(new Set(containers.map((c) => c.inventoryReference)))
+    if (names.length === 0) return undefined
+    if (names.length <= 2) return names.join(", ")
+    return `${names.slice(0, 2).join(", ")} & ${names.length - 2} more`
+  }
+
+  const toShipmentDetails = (
+    shipments: {
+      id: string
+      blNumber: string
+      containers: { inventoryReference: string }[]
+    }[]
+  ) =>
     shipments.map((s) => ({
       id: s.id,
       label: s.blNumber,
+      sublabel: summarizeProducts(s.containers),
       href: `/shipments/${s.id}`,
     }))
 
@@ -125,6 +146,7 @@ export default async function DashboardPage() {
     id: true,
     containerNumber: true,
     shipmentId: true,
+    inventoryReference: true,
     shipment: { select: { blNumber: true } },
   } as const
   const [
@@ -160,12 +182,14 @@ export default async function DashboardPage() {
       id: string
       containerNumber: string
       shipmentId: string
+      inventoryReference: string
       shipment: { blNumber: string }
     }[]
   ) =>
     containers.map((c) => ({
       id: c.id,
       label: `${c.containerNumber} · ${c.shipment.blNumber}`,
+      sublabel: c.inventoryReference,
       href: `/shipments/${c.shipmentId}`,
     }))
 

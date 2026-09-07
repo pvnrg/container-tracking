@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils"
 export interface HorizontalBarChartDetail {
   id: string
   label: string
+  // Secondary line under the label, e.g. the cargo/product name -- shown
+  // muted underneath so the row still scans as one item, not two.
+  sublabel?: string
   href: string
 }
 
@@ -93,18 +96,23 @@ export function HorizontalBarChart({
               <div className="px-1.5">{row}</div>
             )}
             {isExpanded && item.details && (
-              <div className="mb-1 ml-[9.5rem] flex flex-col gap-1 border-l pl-3">
+              <div className="mb-1 ml-[9.5rem] flex flex-col gap-0.5 border-l pl-3">
                 {item.details.slice(0, MAX_VISIBLE_DETAILS).map((detail) => (
                   <Link
                     key={detail.id}
                     href={detail.href}
-                    className="truncate text-sm text-primary hover:underline"
+                    className="flex flex-col gap-0 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/60"
                   >
-                    {detail.label}
+                    <span className="truncate text-sm font-medium">{detail.label}</span>
+                    {detail.sublabel && (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {detail.sublabel}
+                      </span>
+                    )}
                   </Link>
                 ))}
                 {item.details.length > MAX_VISIBLE_DETAILS && (
-                  <span className="text-sm text-muted-foreground">
+                  <span className="px-2 py-1 text-xs text-muted-foreground">
                     +{item.details.length - MAX_VISIBLE_DETAILS} more
                   </span>
                 )}
