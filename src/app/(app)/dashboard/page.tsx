@@ -17,6 +17,7 @@ import {
   Truck,
 } from "lucide-react"
 
+import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -29,6 +30,7 @@ import {
 import { EmptyState } from "@/components/empty-state"
 import { HorizontalBarChart } from "@/components/horizontal-bar-chart"
 import { summarizeContainerProducts } from "@/lib/container-products"
+import { shipmentScopeWhere, shipmentViaContainerScopeWhere } from "@/lib/data-scope"
 import {
   DETENTION_RISK_CLASSES,
   DETENTION_RISK_LABELS,
@@ -56,6 +58,10 @@ function daysUntil(date: Date) {
 }
 
 export default async function DashboardPage() {
+  const session = await auth()
+  const scope = shipmentScopeWhere(session)
+  const containerScope = shipmentViaContainerScopeWhere(session)
+
   const [
     total,
     inTransit,
@@ -64,17 +70,20 @@ export default async function DashboardPage() {
     overdueEtas,
     pendingDocVerifications,
   ] = await Promise.all([
-    prisma.shipment.count(),
-    prisma.shipment.count({ where: { status: "IN_TRANSIT_SEA" } }),
-    prisma.shipment.count({ where: { status: "COMPLETED" } }),
-    prisma.shipment.count({ where: { status: { not: "COMPLETED" } } }),
+    prisma.shipment.count({ where: scope }),
+    prisma.shipment.count({ where: { status: "IN_TRANSIT_SEA", ...scope } }),
+    prisma.shipment.count({ where: { status: "COMPLETED", ...scope } }),
+    prisma.shipment.count({ where: { status: { not: "COMPLETED" }, ...scope } }),
     prisma.shipment.count({
       where: {
         currentEta: { lt: new Date() },
         status: { notIn: ARRIVED_OR_LATER_STATUSES },
+        ...scope,
       },
     }),
-    prisma.document.count({ where: { isVerified: false } }),
+    prisma.document.count({
+      where: { isVerified: false, shipment: containerScope },
+    }),
   ])
 
   // findMany (not count) for these -- the pipeline charts let you expand a
@@ -87,7 +96,7 @@ export default async function DashboardPage() {
   const [shipmentsAtSea, shipmentsAtPort, shipmentsInland, shipmentsCompleted] =
     await Promise.all([
       prisma.shipment.findMany({
-        where: { status: { in: ["SHIPPED_ON_BOARD", "IN_TRANSIT_SEA"] } },
+        where: { status: { in: ["SHIPPED_ON_BOARD", "IN_TRANSIT_SEA"] }, ...scope },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
@@ -96,17 +105,17 @@ export default async function DashboardPage() {
         // ready to load, the cargo is still physically at the port until
         // it's actually LOADED_ROAD_TRANSIT, matching where its containers
         // sit in the Container Pipeline (still DISCHARGED_AT_PORT).
-        where: { status: { in: AT_PORT_STATUSES } },
+        where: { status: { in: AT_PORT_STATUSES }, ...scope },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
       prisma.shipment.findMany({
-        where: { status: { in: INLAND_TRANSIT_STATUSES } },
+        where: { status: { in: INLAND_TRANSIT_STATUSES }, ...scope },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
       prisma.shipment.findMany({
-        where: { status: { in: ["OFFLOADED", "COMPLETED"] } },
+        where: { status: { in: ["OFFLOADED", "COMPLETED"] }, ...scope },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
@@ -147,22 +156,28 @@ export default async function DashboardPage() {
     containersCompleted,
   ] = await Promise.all([
     prisma.container.findMany({
-      where: { status: "ON_VESSEL" },
+      where: { status: "ON_VESSEL", shipment: containerScope },
       select: containerSelect,
       orderBy: { containerNumber: "asc" },
     }),
     prisma.container.findMany({
-      where: { status: "DISCHARGED_AT_PORT" },
+      where: { status: "DISCHARGED_AT_PORT", shipment: containerScope },
       select: containerSelect,
       orderBy: { containerNumber: "asc" },
     }),
     prisma.container.findMany({
-      where: { status: { in: ["IN_TRANSIT_TRUCK", "DELIVERED_WAREHOUSE"] } },
+      where: {
+        status: { in: ["IN_TRANSIT_TRUCK", "DELIVERED_WAREHOUSE"] },
+        shipment: containerScope,
+      },
       select: containerSelect,
       orderBy: { containerNumber: "asc" },
     }),
     prisma.container.findMany({
-      where: { status: { in: ["OFFLOADED", "EMPTY_RETURNED_TO_DEPOT"] } },
+      where: {
+        status: { in: ["OFFLOADED", "EMPTY_RETURNED_TO_DEPOT"] },
+        shipment: containerScope,
+      },
       select: containerSelect,
       orderBy: { containerNumber: "asc" },
     }),
@@ -257,7 +272,11 @@ export default async function DashboardPage() {
   }
 
   const activeTrackers = await prisma.detentionTracker.findMany({
-    where: { returnedToDepotDate: null, clockStartDate: { not: null } },
+    where: {
+      returnedToDepotDate: null,
+      clockStartDate: { not: null },
+      container: { shipment: containerScope },
+    },
     select: {
       deadlineDate: true,
       container: {
@@ -312,14 +331,14 @@ export default async function DashboardPage() {
   )
 
   const upcomingShipments = await prisma.shipment.findMany({
-    where: { status: { notIn: ARRIVED_OR_LATER_STATUSES } },
+    where: { status: { notIn: ARRIVED_OR_LATER_STATUSES }, ...scope },
     select: { id: true, blNumber: true, dischargePort: true, currentEta: true },
     orderBy: { currentEta: "asc" },
     take: 5,
   })
 
   const shipmentsForDocCheck = await prisma.shipment.findMany({
-    where: { status: { not: "COMPLETED" } },
+    where: { status: { not: "COMPLETED" }, ...scope },
     select: {
       id: true,
       blNumber: true,
@@ -338,7 +357,7 @@ export default async function DashboardPage() {
     .filter((a): a is { id: string; blNumber: string; alert: NonNullable<ReturnType<typeof findStageSkipAlert>> } => a !== null)
 
   const arrivedShipments = await prisma.shipment.findMany({
-    where: { status: "ARRIVED_PORT_OF_DISCHARGE" },
+    where: { status: "ARRIVED_PORT_OF_DISCHARGE", ...scope },
     select: {
       id: true,
       blNumber: true,

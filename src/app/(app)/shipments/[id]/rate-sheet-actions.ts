@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { requireShipmentAccess } from "@/lib/data-scope"
 import { prisma } from "@/lib/prisma"
 import { SHIPMENT_STATUS_LABELS } from "@/lib/shipment-labels"
 import { maybeAutoAdvanceStatus } from "@/lib/shipment-status-auto"
@@ -29,6 +30,7 @@ export async function saveRateSheet(input: {
 }) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = saveRateSheetSchema.parse(input)
+  await requireShipmentAccess(session, parsed.shipmentId)
 
   const shipment = await prisma.shipment.findUnique({
     where: { id: parsed.shipmentId },
@@ -117,6 +119,7 @@ export async function saveRateSheet(input: {
 // document doesn't regress status either).
 export async function reopenRateSheet(shipmentId: string) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  await requireShipmentAccess(session, shipmentId)
 
   const sheet = await prisma.transitRateSheet.findUnique({
     where: { shipmentId },

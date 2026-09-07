@@ -7,6 +7,7 @@ import { RwandanDestination, ShipmentStatus } from "@prisma/client"
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
 import { syncContainerStatusToShipment } from "@/lib/container-status-sync"
+import { requireShipmentAccess } from "@/lib/data-scope"
 import { ensureDetentionTrackers } from "@/lib/detention-trackers"
 import { STAGE_DOCUMENT_TYPES } from "@/lib/document-labels"
 import { formatDate } from "@/lib/format"
@@ -40,6 +41,7 @@ export async function updateShipmentTracking(input: {
 }) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = updateSchema.parse(input)
+  await requireShipmentAccess(session, parsed.shipmentId)
 
   const shipment = await prisma.shipment.findUnique({
     where: { id: parsed.shipmentId },

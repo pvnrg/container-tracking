@@ -38,6 +38,7 @@ export function AddUserDialog() {
   const [phone, setPhone] = useState("")
   const [role, setRole] = useState<UserRole | "">("")
   const [password, setPassword] = useState("")
+  const [restrictToOwnData, setRestrictToOwnData] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const reset = () => {
@@ -46,6 +47,7 @@ export function AddUserDialog() {
     setPhone("")
     setRole("")
     setPassword("")
+    setRestrictToOwnData(false)
     setError(null)
   }
 
@@ -57,7 +59,14 @@ export function AddUserDialog() {
     }
     setIsSubmitting(true)
     try {
-      await createUser({ name: name.trim(), email: email.trim(), phone: phone.trim(), role, password })
+      await createUser({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        role,
+        password,
+        restrictToOwnData,
+      })
       toast.success("User created")
       setOpen(false)
       reset()
@@ -135,6 +144,35 @@ export function AddUserDialog() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Data Access</Label>
+            <Select
+              value={restrictToOwnData ? "restricted" : "full"}
+              onValueChange={(v) => setRestrictToOwnData(v === "restricted")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(value: string | null) =>
+                    value === "restricted"
+                      ? "Restricted (only shipments they create)"
+                      : "Full access (sees all shipments)"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full">Full access (sees all shipments)</SelectItem>
+                <SelectItem value="restricted">
+                  Restricted (only shipments they create)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {restrictToOwnData && (
+              <p className="text-xs text-muted-foreground">
+                This account will never see shipments created by anyone else,
+                including existing ones.
+              </p>
+            )}
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

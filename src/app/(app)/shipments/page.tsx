@@ -5,6 +5,7 @@ import { Prisma, ShipmentStatus } from "@prisma/client"
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { shipmentScopeWhere } from "@/lib/data-scope"
 import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
@@ -57,7 +58,7 @@ export default async function ShipmentsPage({
     session?.user.role === "ADMIN" || session?.user.role === "LOGISTICS_OPERATOR"
 
   const shipments = await prisma.shipment.findMany({
-    where: buildWhere(status),
+    where: { ...buildWhere(status), ...shipmentScopeWhere(session) },
     orderBy: { currentEta: "asc" },
     include: { _count: { select: { containers: true } } },
   })

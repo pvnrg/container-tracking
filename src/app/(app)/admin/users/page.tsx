@@ -11,7 +11,20 @@ export default async function UsersPage() {
     redirect("/dashboard")
   }
 
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } })
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+    // Never select password -- this gets passed straight through to the
+    // (client) UsersPanel, and the hash has no business leaving the server.
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      isActive: true,
+      restrictToOwnData: true,
+    },
+  })
 
   return (
     <div className="flex flex-col gap-6">

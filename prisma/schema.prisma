@@ -92,8 +92,14 @@ model User {
 
   role      UserRole @default(LOGISTICS_OPERATOR)
   isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // When true, this account only ever sees/manages shipments it personally
+  // created (via Shipment.createdById) -- every other shipment is invisible
+  // to it, as if it didn't exist. Defaults false so no existing account's
+  // access changes; meant for newly created accounts that shouldn't see
+  // data that predates them. See src/lib/data-scope.ts for enforcement.
+  restrictToOwnData Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   assignedShipments Shipment[]      @relation("TransporterShipments")
   createdShipments  Shipment[]      @relation("OperatorCreatedShipments")

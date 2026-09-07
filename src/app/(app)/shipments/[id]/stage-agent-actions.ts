@@ -6,6 +6,7 @@ import { DocumentStage } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { requireShipmentAccess } from "@/lib/data-scope"
 import { DOCUMENT_STAGE_LABELS } from "@/lib/document-labels"
 import { prisma } from "@/lib/prisma"
 
@@ -26,6 +27,7 @@ export async function upsertStageAgent(input: {
 }) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = upsertStageAgentSchema.parse(input)
+  await requireShipmentAccess(session, parsed.shipmentId)
 
   const shipment = await prisma.shipment.findUnique({
     where: { id: parsed.shipmentId },

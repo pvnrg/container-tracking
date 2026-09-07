@@ -39,6 +39,7 @@ export type UserRow = {
   phone: string
   role: UserRole
   isActive: boolean
+  restrictToOwnData: boolean
 }
 
 export function createUserColumns(currentUserId: string): ColumnDef<UserRow>[] {
@@ -71,6 +72,23 @@ export function createUserColumns(currentUserId: string): ColumnDef<UserRow>[] {
         </Badge>
       ),
       enableSorting: false,
+    },
+    {
+      accessorKey: "restrictToOwnData",
+      meta: { label: "Data Access" },
+      header: "Data Access",
+      enableSorting: false,
+      cell: ({ row }) =>
+        row.original.restrictToOwnData ? (
+          <Badge
+            variant="outline"
+            className="border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+          >
+            Own data only
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">Full access</span>
+        ),
     },
     {
       accessorKey: "isActive",
@@ -171,6 +189,7 @@ function EditUserDialog({ user }: { user: UserRow }) {
   const [email, setEmail] = useState(user.email)
   const [phone, setPhone] = useState(user.phone)
   const [role, setRole] = useState<UserRole>(user.role)
+  const [restrictToOwnData, setRestrictToOwnData] = useState(user.restrictToOwnData)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async () => {
@@ -187,6 +206,7 @@ function EditUserDialog({ user }: { user: UserRow }) {
         email: email.trim(),
         phone: phone.trim(),
         role,
+        restrictToOwnData,
       })
       toast.success("User updated")
       setOpen(false)
@@ -208,6 +228,7 @@ function EditUserDialog({ user }: { user: UserRow }) {
           setEmail(user.email)
           setPhone(user.phone)
           setRole(user.role)
+          setRestrictToOwnData(user.restrictToOwnData)
           setError(null)
         }
       }}
@@ -252,6 +273,29 @@ function EditUserDialog({ user }: { user: UserRow }) {
                     {ROLE_LABELS[r]}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Data Access</Label>
+            <Select
+              value={restrictToOwnData ? "restricted" : "full"}
+              onValueChange={(v) => setRestrictToOwnData(v === "restricted")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(value: string | null) =>
+                    value === "restricted"
+                      ? "Restricted (only shipments they create)"
+                      : "Full access (sees all shipments)"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full">Full access (sees all shipments)</SelectItem>
+                <SelectItem value="restricted">
+                  Restricted (only shipments they create)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

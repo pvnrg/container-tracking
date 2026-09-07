@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { auth } from "@/auth"
+import { shipmentViaContainerScopeWhere } from "@/lib/data-scope"
 import { prisma } from "@/lib/prisma"
 
 import { OffloadTable } from "./offload-table"
@@ -20,6 +21,7 @@ export default async function OffloadPage() {
         status: {
           in: ["LOADED_ROAD_TRANSIT", "ARRIVED_DESTINATION", "OFFLOADED", "COMPLETED"],
         },
+        ...shipmentViaContainerScopeWhere(session),
       },
     },
     select: {

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { auth } from "@/auth"
+import { shipmentViaContainerScopeWhere } from "@/lib/data-scope"
 import { prisma } from "@/lib/prisma"
 import { ARRIVED_OR_LATER_STATUSES } from "@/lib/shipment-labels"
 
@@ -17,7 +18,10 @@ export default async function DetentionPage() {
 
   const containers = await prisma.container.findMany({
     where: {
-      shipment: { status: { in: ARRIVED_OR_LATER_STATUSES } },
+      shipment: {
+        status: { in: ARRIVED_OR_LATER_STATUSES },
+        ...shipmentViaContainerScopeWhere(session),
+      },
     },
     select: {
       id: true,

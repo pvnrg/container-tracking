@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 
 import { auth } from "@/auth"
 import { summarizeContainerProducts } from "@/lib/container-products"
+import { shipmentScopeWhere } from "@/lib/data-scope"
 import { prisma } from "@/lib/prisma"
 
 import { TrackingTable } from "./tracking-table"
@@ -16,6 +17,7 @@ export default async function TrackingPage() {
   }
 
   const rows = await prisma.shipment.findMany({
+    where: shipmentScopeWhere(session),
     orderBy: { currentEta: "asc" },
     select: {
       id: true,

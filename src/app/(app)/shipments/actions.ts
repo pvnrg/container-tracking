@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache"
 import { BlType, DischargePort, Prisma, RwandanDestination } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
-import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-utils"
+import { requireShipmentAccess } from "@/lib/data-scope"
+import { prisma } from "@/lib/prisma"
 import { deleteShipmentFiles } from "@/lib/storage"
 
 const containerSchema = z.object({
@@ -93,7 +94,8 @@ export async function createShipment(values: ShipmentFormValues) {
 }
 
 export async function deleteShipment(shipmentId: string) {
-  await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  await requireShipmentAccess(session, shipmentId)
 
   const shipment = await prisma.shipment.findUnique({
     where: { id: shipmentId },
@@ -122,6 +124,7 @@ export async function assignTransporter(input: {
       transporterId: z.string().min(1),
     })
     .parse(input)
+  await requireShipmentAccess(session, parsed.shipmentId)
 
   const transporter = await prisma.user.findUnique({
     where: { id: parsed.transporterId },

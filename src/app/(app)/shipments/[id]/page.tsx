@@ -81,6 +81,11 @@ export default async function ShipmentDetailPage({
   if (!shipment) {
     notFound()
   }
+  // Same as a normal 404 -- doesn't reveal that a shipment with this id
+  // exists to an account restricted to its own data but not the owner.
+  if (session?.user.restrictToOwnData && shipment.createdById !== session.user.id) {
+    notFound()
+  }
 
   const stageAgents = Object.fromEntries(
     shipment.stageAgents.map((a) => [

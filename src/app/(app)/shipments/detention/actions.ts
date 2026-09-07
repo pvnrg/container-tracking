@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { requireRole } from "@/lib/auth-utils"
+import { requireContainerAccess } from "@/lib/data-scope"
 import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 
@@ -17,6 +18,7 @@ function revalidateDetentionPaths(shipmentId: string) {
 
 export async function startDetentionClock(containerId: string) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  await requireContainerAccess(session, containerId)
 
   const container = await prisma.container.findUnique({
     where: { id: containerId },
@@ -67,6 +69,7 @@ export async function startDetentionClock(containerId: string) {
 
 export async function markContainerReturned(containerId: string) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
+  await requireContainerAccess(session, containerId)
 
   const container = await prisma.container.findUnique({
     where: { id: containerId },

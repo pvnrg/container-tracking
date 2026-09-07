@@ -53,6 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
+          restrictToOwnData: user.restrictToOwnData,
         }
       },
     }),
@@ -62,12 +63,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id as string
         token.role = user.role
+        token.restrictToOwnData = user.restrictToOwnData
       }
       return token
     },
     session: ({ session, token }) => {
       session.user.id = token.id
       session.user.role = token.role
+      session.user.restrictToOwnData = token.restrictToOwnData
       return session
     },
   },

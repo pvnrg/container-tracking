@@ -6,6 +6,7 @@ import { DocumentStage, DocumentType } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { requireShipmentAccess } from "@/lib/data-scope"
 import {
   ALLOWED_DOCUMENT_MIME_TYPES,
   DOCUMENT_TYPE_LABELS,
@@ -43,6 +44,7 @@ export async function uploadDocument(formData: FormData) {
     comment: formData.get("comment") ?? undefined,
     referenceNumber: formData.get("referenceNumber") ?? undefined,
   })
+  await requireShipmentAccess(session, parsed.shipmentId)
 
   const file = formData.get("file")
   if (!(file instanceof File) || file.size === 0) {
@@ -125,6 +127,15 @@ export async function uploadDocument(formData: FormData) {
 export async function verifyDocument(documentId: string) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
 
+  const existing = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { shipmentId: true },
+  })
+  if (!existing) {
+    throw new Error("Document not found")
+  }
+  await requireShipmentAccess(session, existing.shipmentId)
+
   const doc = await prisma.document.update({
     where: { id: documentId },
     data: { isVerified: true, verifiedAt: new Date() },
@@ -184,6 +195,7 @@ export async function deleteDocument(documentId: string) {
   if (!doc) {
     throw new Error("Document not found")
   }
+  await requireShipmentAccess(session, doc.shipmentId)
 
   await deleteFile(doc.fileUrl)
   await prisma.document.delete({ where: { id: documentId } })
@@ -216,6 +228,7 @@ export async function uploadGeneralDocuments(formData: FormData) {
   if (!shipment) {
     throw new Error("Shipment not found")
   }
+  await requireShipmentAccess(session, shipmentId)
 
   const files = formData.getAll("files").filter((f): f is File => f instanceof File)
   const titles = formData.getAll("titles").map((t) => String(t))

@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { requireContainerAccess, requireShipmentAccess } from "@/lib/data-scope"
 import { formatDateTime } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 
@@ -23,6 +24,7 @@ export async function addTruckStatusUpdate(input: {
 }) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = addTruckStatusUpdateSchema.parse(input)
+  await requireContainerAccess(session, parsed.containerId)
 
   const container = await prisma.container.findUnique({
     where: { id: parsed.containerId },
@@ -74,6 +76,7 @@ export async function deleteTruckStatusUpdate(updateId: string) {
   if (!update) {
     throw new Error("Truck status update not found")
   }
+  await requireShipmentAccess(session, update.container.shipmentId)
 
   await prisma.truckStatusUpdate.delete({ where: { id: updateId } })
 

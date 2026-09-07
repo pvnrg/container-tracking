@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { requireContainerAccess } from "@/lib/data-scope"
 import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 
@@ -38,6 +39,7 @@ export async function upsertContainerTransitDetails(input: {
 }) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = upsertContainerTransitDetailsSchema.parse(input)
+  await requireContainerAccess(session, parsed.containerId)
 
   const container = await prisma.container.findUnique({
     where: { id: parsed.containerId },

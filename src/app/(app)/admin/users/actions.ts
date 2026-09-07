@@ -19,6 +19,7 @@ const createUserSchema = z.object({
   phone: phoneSchema,
   role: z.nativeEnum(UserRole),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  restrictToOwnData: z.boolean(),
 })
 
 export async function createUser(input: {
@@ -27,6 +28,7 @@ export async function createUser(input: {
   phone: string
   role: UserRole
   password: string
+  restrictToOwnData: boolean
 }) {
   await requireRole(["ADMIN"])
   const parsed = createUserSchema.parse(input)
@@ -44,6 +46,7 @@ export async function createUser(input: {
       phone: parsed.phone,
       role: parsed.role,
       password: passwordHash,
+      restrictToOwnData: parsed.restrictToOwnData,
     },
   })
 
@@ -56,6 +59,7 @@ const updateUserSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
   phone: phoneSchema,
   role: z.nativeEnum(UserRole),
+  restrictToOwnData: z.boolean(),
 })
 
 export async function updateUser(input: {
@@ -64,6 +68,7 @@ export async function updateUser(input: {
   email: string
   phone: string
   role: UserRole
+  restrictToOwnData: boolean
 }) {
   await requireRole(["ADMIN"])
   const parsed = updateUserSchema.parse(input)
@@ -76,6 +81,7 @@ export async function updateUser(input: {
         email: parsed.email,
         phone: parsed.phone,
         role: parsed.role,
+        restrictToOwnData: parsed.restrictToOwnData,
       },
     })
   } catch (err) {

@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
+import { requireContainerAccess, requireShipmentAccess } from "@/lib/data-scope"
 import { formatDateTime } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import { SHIPMENT_STATUS_ORDER } from "@/lib/shipment-labels"
@@ -28,6 +29,7 @@ export async function scheduleContainerOffload(input: {
 }) {
   const session = await requireRole(["ADMIN", "LOGISTICS_OPERATOR"])
   const parsed = scheduleSchema.parse(input)
+  await requireContainerAccess(session, parsed.containerId)
 
   const container = await prisma.container.update({
     where: { id: parsed.containerId },
@@ -60,6 +62,7 @@ export async function confirmContainerOffload(containerId: string) {
   if (container.actualOffloadedAt) {
     throw new Error("Container is already offloaded")
   }
+  await requireShipmentAccess(session, container.shipmentId)
 
   // Only one container per shipment can be offloaded at a time. A container
   // is "in progress" once it has a scheduled offload date and hasn't been
