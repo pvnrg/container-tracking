@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 import { ROLE_LABELS } from "@/lib/auth-utils"
 
@@ -143,6 +144,7 @@ export function AppNav({
           <span className="text-muted-foreground">
             {name} &middot; {ROLE_LABELS[role]}
           </span>
+          <ThemeToggle />
           <Button
             variant="outline"
             size="sm"
@@ -209,14 +211,17 @@ export function AppNav({
             <span className="px-3 text-sm text-muted-foreground">
               {name} &middot; {ROLE_LABELS[role]}
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              <LogOut data-icon="inline-start" />
-              Sign out
-            </Button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                <LogOut data-icon="inline-start" />
+                Sign out
+              </Button>
+            </div>
           </div>
         </div>
       )}

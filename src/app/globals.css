@@ -117,6 +117,71 @@
   --sidebar-ring: oklch(0.6 0.11 220);
 }
 
+@custom-variant glass (&:is(.glass *));
+
+.glass {
+  --background: oklch(0.95 0.02 250);
+  --foreground: oklch(0.22 0.04 250);
+  --card: oklch(1 0 0 / 55%);
+  --card-foreground: oklch(0.22 0.04 250);
+  --popover: oklch(1 0 0 / 85%);
+  --popover-foreground: oklch(0.22 0.04 250);
+  --primary: oklch(0.55 0.18 265);
+  --primary-foreground: oklch(0.98 0.005 250);
+  --secondary: oklch(1 0 0 / 45%);
+  --secondary-foreground: oklch(0.3 0.08 250);
+  --muted: oklch(1 0 0 / 35%);
+  --muted-foreground: oklch(0.4 0.04 250);
+  --accent: oklch(1 0 0 / 55%);
+  --accent-foreground: oklch(0.28 0.1 250);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(1 0 0 / 45%);
+  --input: oklch(1 0 0 / 50%);
+  --ring: oklch(0.6 0.16 265);
+  --chart-1: oklch(0.6 0.15 234);
+  --chart-2: oklch(0.65 0.13 190);
+  --chart-3: oklch(0.75 0.15 80);
+  --chart-4: oklch(0.6 0.18 300);
+  --chart-5: oklch(0.65 0.15 150);
+  --sidebar: oklch(1 0 0 / 55%);
+  --sidebar-foreground: oklch(0.22 0.04 250);
+  --sidebar-primary: oklch(0.55 0.18 265);
+  --sidebar-primary-foreground: oklch(0.98 0.005 250);
+  --sidebar-accent: oklch(1 0 0 / 55%);
+  --sidebar-accent-foreground: oklch(0.28 0.1 250);
+  --sidebar-border: oklch(1 0 0 / 45%);
+  --sidebar-ring: oklch(0.6 0.16 265);
+}
+
+/* Colorful fixed backdrop so the translucent, blurred surfaces below
+   actually have something worth showing through -- a flat background would
+   make "glass" panels just look like plain low-contrast gray ones. */
+.glass body {
+  background-image:
+    radial-gradient(circle at 15% 15%, oklch(0.82 0.12 250 / 55%), transparent 45%),
+    radial-gradient(circle at 85% 10%, oklch(0.85 0.1 320 / 50%), transparent 50%),
+    radial-gradient(circle at 50% 95%, oklch(0.85 0.12 180 / 45%), transparent 55%),
+    linear-gradient(160deg, oklch(0.93 0.02 250), oklch(0.9 0.03 280));
+  background-attachment: fixed;
+}
+
+.glass header {
+  background-color: var(--card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Targets the bg-card / bg-popover utility classes directly (rather than
+   only the Card/Dialog/etc. components) so every surface built on top of
+   them -- including the ones assembled from raw divs, like the dashboard's
+   stat tiles -- gets the same frosted-glass treatment automatically. */
+.glass .bg-card,
+.glass .bg-popover {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px oklch(0.3 0.05 260 / 12%);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
