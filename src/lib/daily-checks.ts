@@ -1,4 +1,5 @@
 import { logShipmentAudit } from "@/lib/audit"
+import { syncContainerStatusToShipment } from "@/lib/container-status-sync"
 import { ensureDetentionTrackers } from "@/lib/detention-trackers"
 import {
   describeStageSkipAlert,
@@ -75,6 +76,68 @@ async function runEtaArrivalAutoAdvance() {
         shipmentId: shipment.id,
         title: "Arrived at Port of Discharge",
         message: `Shipment ${shipment.blNumber} has arrived at the discharge port. Add the Stage 2 clearing agent, transit details, and customs declaration.`,
+      })
+    }
+  }
+
+  return { shipmentsAdvanced: dueShipments.length }
+}
+
+// Same idea as the sea-leg ETA above, but for the road leg:
+// transitArrivalEta was previously write-only (set on the shipment,
+// displayed, never read by anything) -- once it passes for a shipment
+// still shown as loaded on the truck, treat it as having reached the
+// destination warehouse instead of waiting for someone to update it by
+// hand.
+async function runRoadTransitArrivalAutoAdvance() {
+  const dueShipments = await prisma.shipment.findMany({
+    where: {
+      status: "LOADED_ROAD_TRANSIT",
+      transitArrivalEta: { not: null, lte: new Date() },
+    },
+    select: { id: true, blNumber: true },
+  })
+
+  if (dueShipments.length === 0) {
+    return { shipmentsAdvanced: 0 }
+  }
+
+  // Arriving at destination means offload needs to be scheduled next --
+  // same audience as the other arrival milestone above.
+  const opsUsers = await prisma.user.findMany({
+    where: { isActive: true, role: { in: ["ADMIN", "LOGISTICS_OPERATOR"] } },
+    select: { id: true },
+  })
+
+  for (const shipment of dueShipments) {
+    await prisma.shipment.update({
+      where: { id: shipment.id },
+      data: { status: "ARRIVED_DESTINATION" },
+    })
+
+    // Keeps Container.status from going stale the same way the dashboard's
+    // Shipment/Container Pipeline mismatch did before (see
+    // container-status-sync.ts) -- required here since this is a new path
+    // that reaches ARRIVED_DESTINATION outside the manual tracking form.
+    await syncContainerStatusToShipment(shipment.id, "ARRIVED_DESTINATION")
+    await ensureDetentionTrackers(shipment.id)
+
+    await logShipmentAudit({
+      shipmentId: shipment.id,
+      action: "STATUS_AUTO_UPDATED",
+      oldValue: { status: SHIPMENT_STATUS_LABELS.LOADED_ROAD_TRANSIT },
+      newValue: {
+        status: SHIPMENT_STATUS_LABELS.ARRIVED_DESTINATION,
+        reason: "because its road transit ETA was reached",
+      },
+    })
+
+    for (const user of opsUsers) {
+      await createNotification({
+        userId: user.id,
+        shipmentId: shipment.id,
+        title: "Arrived at Destination",
+        message: `Shipment ${shipment.blNumber} is expected to have arrived at its destination warehouse. Confirm and schedule container offload.`,
       })
     }
   }
@@ -331,6 +394,7 @@ export async function runDailyChecks() {
   // Runs first so a shipment whose ETA has just passed is no longer
   // considered "at sea" by the time the 7-day broadcast below queries for it.
   const etaArrivalAutoAdvance = await runEtaArrivalAutoAdvance()
+  const roadTransitArrivalAutoAdvance = await runRoadTransitArrivalAutoAdvance()
   const sevenDayBroadcast = await runSevenDayBroadcast()
   const detentionEscalations = await runDetentionEscalations()
   const stageSkipAlerts = await runStageSkipAlertNotifications()
@@ -338,6 +402,7 @@ export async function runDailyChecks() {
 
   return {
     etaArrivalAutoAdvance,
+    roadTransitArrivalAutoAdvance,
     sevenDayBroadcast,
     detentionEscalations,
     stageSkipAlerts,
