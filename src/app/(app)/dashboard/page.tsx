@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card"
 import { EmptyState } from "@/components/empty-state"
 import { HorizontalBarChart } from "@/components/horizontal-bar-chart"
+import { summarizeContainerProducts } from "@/lib/container-products"
 import {
   DETENTION_RISK_CLASSES,
   DETENTION_RISK_LABELS,
@@ -111,16 +112,6 @@ export default async function DashboardPage() {
       }),
     ])
 
-  // Dedupes a shipment's container product names into one short line, e.g.
-  // "Steel Coils, Ceramic Tiles" or "Steel Coils, Ceramic Tiles & 1 more"
-  // once a shipment carries more than a couple of distinct products.
-  const summarizeProducts = (containers: { inventoryReference: string }[]) => {
-    const names = Array.from(new Set(containers.map((c) => c.inventoryReference)))
-    if (names.length === 0) return undefined
-    if (names.length <= 2) return names.join(", ")
-    return `${names.slice(0, 2).join(", ")} & ${names.length - 2} more`
-  }
-
   const toShipmentDetails = (
     shipments: {
       id: string
@@ -131,7 +122,7 @@ export default async function DashboardPage() {
     shipments.map((s) => ({
       id: s.id,
       label: s.blNumber,
-      sublabel: summarizeProducts(s.containers),
+      sublabel: summarizeContainerProducts(s.containers),
       href: `/shipments/${s.id}`,
     }))
 

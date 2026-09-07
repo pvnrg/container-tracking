@@ -34,6 +34,8 @@ export type TrackingShipment = {
   dischargePort: DischargePort
   status: ShipmentStatus
   currentEta: Date
+  shipperName: string | null
+  products: string | null
 }
 
 export type TrackingDraft = { status: ShipmentStatus; currentEta: string }
@@ -88,6 +90,24 @@ export function createTrackingColumns(
       meta: { label: "Shipping Line" },
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Shipping Line" />
+      ),
+    },
+    {
+      accessorKey: "shipperName",
+      meta: { label: "Shipper" },
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Shipper" />,
+      cell: ({ row }) => row.original.shipperName ?? "—",
+    },
+    {
+      id: "products",
+      accessorFn: (row) => row.products,
+      meta: { label: "Product" },
+      header: "Product",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="block max-w-56 truncate" title={row.original.products ?? undefined}>
+          {row.original.products ?? "—"}
+        </span>
       ),
     },
     {

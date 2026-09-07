@@ -85,8 +85,8 @@ export function TrackingTable({
     <DataTable
       columns={columns}
       data={filteredShipments}
-      searchableColumns={["blNumber"]}
-      searchPlaceholder="Search BL number..."
+      searchableColumns={["blNumber", "shipperName", "products"]}
+      searchPlaceholder="Search BL number, shipper, or product..."
       emptyMessage="No shipments match your filters."
       filters={
         <Select
