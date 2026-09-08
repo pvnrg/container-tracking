@@ -218,7 +218,11 @@ function detectContainerType(text: string): string | undefined {
       // an unrelated "40.000" measurement elsewhere in the row can't be
       // mistaken for the container's size.
       const before = text.slice(Math.max(0, wordMatch.index - 15), wordMatch.index)
-      const sizeMatch = before.match(/\b(20|40|45)\b/)
+      // Last match, not first -- a weight value ending in "...45.678" can
+      // land inside this same lookback window ahead of the real size, and
+      // the real size is always the one closest to the type word.
+      const sizeMatches = [...before.matchAll(/\b(20|40|45)\b/g)]
+      const sizeMatch = sizeMatches.at(-1)
       return sizeMatch ? `${sizeMatch[1]}${code}` : code
     }
   }
