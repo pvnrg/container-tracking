@@ -15,6 +15,7 @@ import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
   SHIPMENT_STATUS_LABELS,
+  SHIPMENT_STATUS_ORDER,
 } from "@/lib/shipment-labels"
 
 const updateSchema = z.object({
@@ -54,6 +55,12 @@ export async function updateShipmentTracking(input: {
   })
   if (!shipment) {
     throw new Error("Shipment not found")
+  }
+
+  if (SHIPMENT_STATUS_ORDER.indexOf(parsed.status) < SHIPMENT_STATUS_ORDER.indexOf(shipment.status)) {
+    throw new Error(
+      `Status can't move backward from "${SHIPMENT_STATUS_LABELS[shipment.status]}" to "${SHIPMENT_STATUS_LABELS[parsed.status]}" -- its containers may have already advanced past that point.`
+    )
   }
 
   if (parsed.status === "LOADED_ROAD_TRANSIT") {
