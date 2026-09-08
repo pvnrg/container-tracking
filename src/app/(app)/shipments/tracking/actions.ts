@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { RwandanDestination, ShipmentStatus } from "@prisma/client"
+import { DocumentStage, RwandanDestination, ShipmentStatus } from "@prisma/client"
 
 import { logShipmentAudit } from "@/lib/audit"
 import { requireRole } from "@/lib/auth-utils"
 import { syncContainerStatusToShipment } from "@/lib/container-status-sync"
 import { requireShipmentAccess } from "@/lib/data-scope"
 import { ensureDetentionTrackers } from "@/lib/detention-trackers"
-import { STAGE_DOCUMENT_TYPES } from "@/lib/document-labels"
+import { isStageComplete } from "@/lib/document-stage-alerts"
 import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import {
@@ -17,6 +17,35 @@ import {
   SHIPMENT_STATUS_LABELS,
   SHIPMENT_STATUS_ORDER,
 } from "@/lib/shipment-labels"
+
+// Manually promoting a shipment into one of these statuses requires the
+// PRECEDING document stage to already be verified -- e.g. you physically
+// can't load cargo onto a truck (LOADED_ROAD_TRANSIT) before customs has
+// released it (PORT_CLEARANCE), regardless of what the status dropdown
+// lets you pick. This is the same "out of order" rule findStageSkipAlert
+// flags on the dashboard, enforced here as a hard block instead of just a
+// warning, since these three are the paperwork-gated milestones (not
+// purely physical events like arrival, which the ETA/road-transit
+// auto-advance cron jobs already set without any document check).
+const MANUAL_STATUS_DOCUMENT_GATE: Partial<
+  Record<ShipmentStatus, { requiredStage: DocumentStage; message: string }>
+> = {
+  CUSTOMS_CLEARED: {
+    requiredStage: "ENTRY_LEVEL",
+    message:
+      "Upload and verify the Stage 1 entry documents (Commercial Invoice, Packing List, BL, COA) before marking as Customs Cleared.",
+  },
+  LOADED_ROAD_TRANSIT: {
+    requiredStage: "PORT_CLEARANCE",
+    message:
+      "Upload and verify a Stage 2 customs declaration (WH7/T1/IM4) before marking as Loaded on Truck.",
+  },
+  OFFLOADED: {
+    requiredStage: "ROAD_TRANSIT",
+    message:
+      "Record Stage 3 road transit details, or finalize the transit rate sheet, before marking as Offloaded.",
+  },
+}
 
 const updateSchema = z.object({
   shipmentId: z.string().min(1),
@@ -63,20 +92,27 @@ export async function updateShipmentTracking(input: {
     )
   }
 
-  if (parsed.status === "LOADED_ROAD_TRANSIT") {
-    const verifiedPortClearanceDoc = await prisma.document.findFirst({
-      where: {
-        shipmentId: parsed.shipmentId,
-        stage: "PORT_CLEARANCE",
-        type: { in: STAGE_DOCUMENT_TYPES.PORT_CLEARANCE },
-        isVerified: true,
-      },
-      select: { id: true },
+  const gate = MANUAL_STATUS_DOCUMENT_GATE[parsed.status]
+  if (gate) {
+    const [docs, rateSheet] = await Promise.all([
+      prisma.document.findMany({
+        where: { shipmentId: parsed.shipmentId, stage: { not: null }, type: { not: null } },
+        select: { stage: true, type: true, isVerified: true },
+      }),
+      prisma.transitRateSheet.findUnique({
+        where: { shipmentId: parsed.shipmentId },
+        select: { finalizedAt: true },
+      }),
+    ])
+    const structuredDocs = docs.filter(
+      (d): d is { stage: DocumentStage; type: NonNullable<typeof d.type>; isVerified: boolean } =>
+        d.stage !== null && d.type !== null
+    )
+    const complete = isStageComplete(gate.requiredStage, structuredDocs, {
+      rateSheetFinalized: rateSheet?.finalizedAt != null,
     })
-    if (!verifiedPortClearanceDoc) {
-      throw new Error(
-        "Upload and verify a Stage 2 customs declaration (WH7/T1/IM4) before marking as Loaded on Truck."
-      )
+    if (!complete) {
+      throw new Error(gate.message)
     }
   }
 
