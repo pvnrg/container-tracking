@@ -89,8 +89,14 @@ export function findStageSkipAlert(
   if (incompleteIndex === -1) return null
 
   const incompleteStage = STAGE_ORDER[incompleteIndex]
-  const aheadStages = STAGE_ORDER.slice(incompleteIndex + 1).filter((stage) =>
-    structured.some((d) => d.stage === stage)
+  const aheadStages = STAGE_ORDER.slice(incompleteIndex + 1).filter(
+    (stage) =>
+      structured.some((d) => d.stage === stage) ||
+      // ROAD_TRANSIT can be reached with zero documents uploaded, via a
+      // finalized rate sheet alone (see isStageComplete above) -- without
+      // this, a shipment that skipped ahead that way never triggers the
+      // alert, since there's no document row for the filter above to find.
+      (stage === "ROAD_TRANSIT" && options?.rateSheetFinalized === true)
   )
   if (aheadStages.length === 0) return null
 
@@ -122,5 +128,5 @@ export function describeStageSkipAlert(alert: StageSkipAlert): string {
     ? "no declaration verified yet"
     : `${STAGE_DOCUMENT_TYPES[alert.incompleteStage].length - alert.missingTypes.length}/${STAGE_DOCUMENT_TYPES[alert.incompleteStage].length} verified`
 
-  return `${from} incomplete (${progress}) — ${to} already has uploads`
+  return `${from} incomplete (${progress}) — ${to} already has progress`
 }
