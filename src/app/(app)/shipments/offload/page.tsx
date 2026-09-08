@@ -3,8 +3,15 @@ import { redirect } from "next/navigation"
 import { auth } from "@/auth"
 import { shipmentViaContainerScopeWhere } from "@/lib/data-scope"
 import { prisma } from "@/lib/prisma"
+import { COMPLETED_STATUSES, INLAND_TRANSIT_STATUSES } from "@/lib/shipment-labels"
 
 import { OffloadTable } from "./offload-table"
+
+// A container becomes eligible for offload once its shipment has actually
+// left the port (LOADED_ROAD_TRANSIT onward) -- derived from the shared
+// status-order constants rather than hand-listed, so this doesn't silently
+// go stale if the status pipeline ever changes.
+const OFFLOAD_ELIGIBLE_STATUSES = [...INLAND_TRANSIT_STATUSES, ...COMPLETED_STATUSES]
 
 export default async function OffloadPage() {
   const session = await auth()
@@ -18,9 +25,7 @@ export default async function OffloadPage() {
   const containers = await prisma.container.findMany({
     where: {
       shipment: {
-        status: {
-          in: ["LOADED_ROAD_TRANSIT", "ARRIVED_DESTINATION", "OFFLOADED", "COMPLETED"],
-        },
+        status: { in: OFFLOAD_ELIGIBLE_STATUSES },
         ...shipmentViaContainerScopeWhere(session),
       },
     },

@@ -33,6 +33,17 @@ export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
   COMPLETED: "Empty Container Returned",
 }
 
+// Statuses where cargo is still at sea or just loaded, not yet discharged.
+// Shared by the dashboard's In-Transit (Ocean) KPI/pipeline bucket, so both
+// always agree.
+export const AT_SEA_STATUSES: ShipmentStatus[] = ["SHIPPED_ON_BOARD", "IN_TRANSIT_SEA"]
+
+// Statuses where the shipment's journey is effectively done -- offloaded
+// and unsealed, or fully closed out with the empty container returned.
+// Shared by the dashboard's Completed KPI/pipeline bucket, so both always
+// agree.
+export const COMPLETED_STATUSES: ShipmentStatus[] = ["OFFLOADED", "COMPLETED"]
+
 // Statuses reached at or after physical discharge at the seaport.
 export const ARRIVED_OR_LATER_STATUSES: ShipmentStatus[] = [
   "ARRIVED_PORT_OF_DISCHARGE",

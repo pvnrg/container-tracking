@@ -47,6 +47,8 @@ import { prisma } from "@/lib/prisma"
 import {
   ARRIVED_OR_LATER_STATUSES,
   AT_PORT_STATUSES,
+  AT_SEA_STATUSES,
+  COMPLETED_STATUSES,
   DISCHARGE_PORT_LABELS,
   INLAND_TRANSIT_STATUSES,
 } from "@/lib/shipment-labels"
@@ -62,17 +64,8 @@ export default async function DashboardPage() {
   const scope = shipmentScopeWhere(session)
   const containerScope = shipmentViaContainerScopeWhere(session)
 
-  const [
-    total,
-    inTransit,
-    completed,
-    active,
-    overdueEtas,
-    pendingDocVerifications,
-  ] = await Promise.all([
+  const [total, active, overdueEtas, pendingDocVerifications] = await Promise.all([
     prisma.shipment.count({ where: scope }),
-    prisma.shipment.count({ where: { status: "IN_TRANSIT_SEA", ...scope } }),
-    prisma.shipment.count({ where: { status: "COMPLETED", ...scope } }),
     prisma.shipment.count({ where: { status: { not: "COMPLETED" }, ...scope } }),
     prisma.shipment.count({
       where: {
@@ -96,7 +89,7 @@ export default async function DashboardPage() {
   const [shipmentsAtSea, shipmentsAtPort, shipmentsInland, shipmentsCompleted] =
     await Promise.all([
       prisma.shipment.findMany({
-        where: { status: { in: ["SHIPPED_ON_BOARD", "IN_TRANSIT_SEA"] }, ...scope },
+        where: { status: { in: AT_SEA_STATUSES }, ...scope },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
@@ -115,7 +108,7 @@ export default async function DashboardPage() {
         orderBy: { blNumber: "asc" },
       }),
       prisma.shipment.findMany({
-        where: { status: { in: ["OFFLOADED", "COMPLETED"] }, ...scope },
+        where: { status: { in: COMPLETED_STATUSES }, ...scope },
         select: shipmentSelect,
         orderBy: { blNumber: "asc" },
       }),
@@ -229,11 +222,14 @@ export default async function DashboardPage() {
       href: "/shipments?status=active",
     },
     {
+      // Same shipmentsAtSea query that feeds the Shipment Pipeline chart's
+      // "At Sea" bucket below, so this tile can never drift out of sync
+      // with it.
       label: "In-Transit (Ocean)",
-      value: inTransit,
+      value: shipmentsAtSea.length,
       icon: Ship,
       iconClass: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-      href: "/shipments?status=IN_TRANSIT_SEA",
+      href: "/shipments?status=at-sea",
     },
     {
       // Same shipmentsAtPort query that feeds the Shipment Pipeline chart's
@@ -256,11 +252,14 @@ export default async function DashboardPage() {
       href: "/shipments?status=inland-transit",
     },
     {
+      // Same shipmentsCompleted query that feeds the Shipment Pipeline
+      // chart's "Completed" bucket below, so this tile can never drift out
+      // of sync with it.
       label: "Completed",
-      value: completed,
+      value: shipmentsCompleted.length,
       icon: CheckCircle2,
       iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-      href: "/shipments?status=COMPLETED",
+      href: "/shipments?status=completed",
     },
   ]
 

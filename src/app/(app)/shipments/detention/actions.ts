@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth-utils"
 import { requireContainerAccess } from "@/lib/data-scope"
 import { formatDate } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
+import { SHIPMENT_STATUS_ORDER } from "@/lib/shipment-labels"
 
 const FREE_TIME_DAYS = 30
 
@@ -105,6 +106,35 @@ export async function markContainerReturned(containerId: string) {
       },
     }),
   ])
+
+  // Mirrors confirmContainerOffload's all-offloaded check one stage further
+  // on -- without this, a shipment whose containers are all back at the
+  // depot stays stuck at OFFLOADED forever, and the dashboard's Shipment
+  // vs. Container Pipeline "Completed" counts drift apart.
+  const siblingContainers = await prisma.container.findMany({
+    where: { shipmentId: container.shipmentId },
+    select: { status: true },
+  })
+  const allReturned = siblingContainers.every(
+    (c) => c.status === "EMPTY_RETURNED_TO_DEPOT"
+  )
+
+  if (allReturned) {
+    const shipment = await prisma.shipment.findUnique({
+      where: { id: container.shipmentId },
+      select: { status: true },
+    })
+    if (
+      shipment &&
+      SHIPMENT_STATUS_ORDER.indexOf(shipment.status) <
+        SHIPMENT_STATUS_ORDER.indexOf("COMPLETED")
+    ) {
+      await prisma.shipment.update({
+        where: { id: container.shipmentId },
+        data: { status: "COMPLETED" },
+      })
+    }
+  }
 
   revalidateDetentionPaths(container.shipmentId)
 }
