@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 
 import { auth } from "@/auth"
+import { AnimatedNumber } from "@/components/animated-number"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -423,7 +424,7 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       {attentionItems.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed p-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed p-3 animate-in fade-in slide-in-from-top-2 duration-500">
           <span className="mr-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             Needs attention
           </span>
@@ -442,7 +443,7 @@ export default async function DashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-xl border border-dashed border-emerald-600/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-emerald-600/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-400 animate-in fade-in slide-in-from-top-2 duration-500">
           <CircleCheck className="size-4 shrink-0" />
           All caught up — no overdue ETAs, unverified documents, or paperwork
           gaps right now.
@@ -450,11 +451,12 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {stats.map((s) => (
+        {stats.map((s, i) => (
           <Link
             key={s.label}
             href={s.href}
-            className="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40"
+            style={{ animationDelay: `${i * 60}ms` }}
+            className="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40 animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500"
           >
             <div className="flex items-center gap-2">
               <div
@@ -469,12 +471,14 @@ export default async function DashboardPage() {
                 {s.label}
               </span>
             </div>
-            <span className="text-3xl font-bold tabular-nums">{s.value}</span>
+            <span className="text-3xl font-bold tabular-nums">
+              <AnimatedNumber value={s.value} />
+            </span>
           </Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 delay-[250ms]">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -528,7 +532,7 @@ export default async function DashboardPage() {
 
       <Card
         id="document-stage-alerts"
-        className="border-red-600/50 dark:border-red-500/50"
+        className="border-red-600/50 dark:border-red-500/50 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 delay-[350ms]"
       >
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -582,7 +586,10 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card id="stage2-alerts">
+      <Card
+        id="stage2-alerts"
+        className="animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 delay-[450ms]"
+      >
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-400">
@@ -638,7 +645,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 delay-[550ms]">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">

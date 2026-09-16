@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { ChevronDown } from "lucide-react"
 
@@ -40,11 +40,20 @@ export function HorizontalBarChart({
 }) {
   const max = Math.max(1, ...items.map((item) => item.value))
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
+  // Bars grow in from 0 on mount instead of snapping straight to their
+  // final width -- starts false so the very first paint has every bar at
+  // 0%, then flips true a frame later so the width change is picked up by
+  // the existing transition-[width] instead of happening instantly.
+  const [grown, setGrown] = useState(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setGrown(true))
+    return () => cancelAnimationFrame(frame)
+  }, [])
 
   return (
     <div className="flex flex-col gap-1">
       {items.map((item) => {
-        const pct = item.value === 0 ? 0 : (item.value / max) * 100
+        const pct = !grown || item.value === 0 ? 0 : (item.value / max) * 100
         const isExpandable = item.details !== undefined && item.value > 0
         const isExpanded = isExpandable && expandedKey === item.key
 
@@ -56,10 +65,10 @@ export function HorizontalBarChart({
             </div>
             <div className="flex flex-1 items-center gap-2.5">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/60">
-                {pct > 0 && (
+                {item.value > 0 && (
                   <div
                     className={cn(
-                      "h-full rounded-full transition-[width]",
+                      "h-full rounded-full transition-[width] duration-700 ease-out",
                       item.colorClass
                     )}
                     style={{ width: `${pct}%` }}
@@ -95,27 +104,41 @@ export function HorizontalBarChart({
             ) : (
               <div className="px-1.5">{row}</div>
             )}
-            {isExpanded && item.details && (
-              <div className="mb-1 ml-[9.5rem] flex flex-col gap-0.5 border-l pl-3">
-                {item.details.slice(0, MAX_VISIBLE_DETAILS).map((detail) => (
-                  <Link
-                    key={detail.id}
-                    href={detail.href}
-                    className="flex flex-col gap-0 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/60"
-                  >
-                    <span className="truncate text-sm font-medium">{detail.label}</span>
-                    {detail.sublabel && (
-                      <span className="truncate text-xs text-muted-foreground">
-                        {detail.sublabel}
+            {item.details && (
+              // CSS grid-rows accordion trick: the row is always mounted (so
+              // there's something to transition between) and animates its
+              // own track size from 0fr to 1fr, with the inner overflow-hidden
+              // wrapper clipping the content at whatever height that yields
+              // -- avoids having to measure/JS-animate an "auto" height.
+              <div
+                className={cn(
+                  "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+                  isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="mb-1 ml-[9.5rem] flex flex-col gap-0.5 border-l pl-3">
+                    {item.details.slice(0, MAX_VISIBLE_DETAILS).map((detail) => (
+                      <Link
+                        key={detail.id}
+                        href={detail.href}
+                        className="flex flex-col gap-0 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/60"
+                      >
+                        <span className="truncate text-sm font-medium">{detail.label}</span>
+                        {detail.sublabel && (
+                          <span className="truncate text-xs text-muted-foreground">
+                            {detail.sublabel}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                    {item.details.length > MAX_VISIBLE_DETAILS && (
+                      <span className="px-2 py-1 text-xs text-muted-foreground">
+                        +{item.details.length - MAX_VISIBLE_DETAILS} more
                       </span>
                     )}
-                  </Link>
-                ))}
-                {item.details.length > MAX_VISIBLE_DETAILS && (
-                  <span className="px-2 py-1 text-xs text-muted-foreground">
-                    +{item.details.length - MAX_VISIBLE_DETAILS} more
-                  </span>
-                )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
