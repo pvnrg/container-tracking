@@ -193,3 +193,53 @@
     @apply font-sans;
   }
 }
+
+/* Soft, continuous "breathing" ring for things that need attention but
+   aren't urgent (e.g. the Pending Verifications chip) -- ties the ring
+   color to the element's own text color via currentColor, so the same
+   utility works for any severity color without extra variants. */
+@keyframes pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, currentColor 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklch, currentColor 0%, transparent);
+  }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+/* One-shot shake for a newly-surfaced hard alert (e.g. Document Stage
+   Alerts) -- fires once on mount rather than looping, so it catches the
+   eye without being distracting on every re-render. */
+@keyframes attention-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(3px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-2px) rotate(-1deg);
+  }
+  80% {
+    transform: translateX(2px) rotate(1deg);
+  }
+}
+.animate-attention-shake {
+  animation: attention-shake 400ms ease-in-out 1;
+  animation-delay: 900ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-ring,
+  .animate-attention-shake {
+    animation: none;
+  }
+}

@@ -434,7 +434,11 @@ export default async function DashboardPage() {
               href={item.href}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-opacity hover:opacity-80",
-                item.classes
+                item.classes,
+                // Soft continuous pulse just for the "needs a look, not
+                // urgent" case -- Out-of-Order Paperwork already gets a
+                // harder shake down on its own card, so it isn't doubled up.
+                item.key === "pending-docs" && "animate-pulse-ring"
               )}
             >
               {item.label}
@@ -456,12 +460,19 @@ export default async function DashboardPage() {
             key={s.label}
             href={s.href}
             style={{ animationDelay: `${i * 60}ms` }}
-            className="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40 animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500"
+            className={cn(
+              "group flex flex-col gap-3 rounded-xl border bg-card p-4 animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500",
+              // Hover duration is set via raw CSS properties (not the
+              // duration-* utility) so it doesn't fight over --tw-duration
+              // with the mount animation's duration-500 above -- 200ms in,
+              // 150ms back out, per the hover spec.
+              "transition-[translate,box-shadow,background-color] [transition-duration:150ms] ease-out hover:-translate-y-1 hover:bg-muted/40 hover:shadow-md hover:[transition-duration:200ms]"
+            )}
           >
             <div className="flex items-center gap-2">
               <div
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-full",
+                  "flex size-8 shrink-0 items-center justify-center rounded-full transition-[rotate] [transition-duration:150ms] ease-out group-hover:rotate-[10deg] group-hover:[transition-duration:200ms]",
                   s.iconClass
                 )}
               >
@@ -471,7 +482,7 @@ export default async function DashboardPage() {
                 {s.label}
               </span>
             </div>
-            <span className="text-3xl font-bold tabular-nums">
+            <span className="inline-block w-fit text-3xl font-bold tabular-nums transition-[scale] [transition-duration:150ms] ease-out group-hover:scale-105 group-hover:[transition-duration:200ms]">
               <AnimatedNumber value={s.value} />
             </span>
           </Link>
@@ -536,7 +547,15 @@ export default async function DashboardPage() {
       >
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm shadow-red-600/30">
+            <div
+              className={cn(
+                "flex size-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm shadow-red-600/30",
+                // Fires once on mount to catch the eye when there's
+                // something to act on -- not a loop, so it doesn't nag on
+                // every visit to the page.
+                stageSkipAlerts.length > 0 && "animate-attention-shake"
+              )}
+            >
               <FileWarning className="size-4.5" />
             </div>
             <div>
