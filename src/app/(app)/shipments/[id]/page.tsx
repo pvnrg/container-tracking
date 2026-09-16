@@ -1,7 +1,15 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { DocumentStage, DocumentType } from "@prisma/client"
-import { ArrowLeft, CalendarClock, Container, MapPinned, Users } from "lucide-react"
+import {
+  ArrowLeft,
+  CalendarClock,
+  Container,
+  FileText,
+  History,
+  MapPinned,
+  Users,
+} from "lucide-react"
 
 import { auth } from "@/auth"
 import { AUDIT_ACTION_LABELS, describeAuditEntry } from "@/lib/audit"
@@ -19,6 +27,7 @@ import {
 } from "@/components/ui/table"
 import { formatDateTime } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
+import { cn } from "@/lib/utils"
 import {
   BL_TYPE_LABELS,
   CONTAINER_STATUS_BADGE_CLASSES,
@@ -36,6 +45,11 @@ import { ShipmentTimelineCard } from "./shipment-timeline"
 import { TaxPaymentCard } from "./tax-payment-card"
 import { ShipmentDeleteButton } from "../shipment-delete-button"
 import { ShipmentEditDialog } from "../shipment-edit-dialog"
+
+// Placeholder text used throughout detailGroups below for a field with no
+// value yet -- rendered softer than a real value so the two read as
+// distinct at a glance instead of looking like equally-weighted data.
+const EMPTY_FIELD_VALUES = new Set(["—", "Not yet allocated"])
 
 export default async function ShipmentDetailPage({
   params,
@@ -153,11 +167,13 @@ export default async function ShipmentDetailPage({
   const detailGroups: {
     heading: string
     icon: typeof MapPinned
+    iconClass: string
     fields: [string, React.ReactNode][]
   }[] = [
     {
       heading: "Route & Cargo",
       icon: MapPinned,
+      iconClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
       fields: [
         ["BL Type", BL_TYPE_LABELS[shipment.blType]],
         ["Shipping Line", shipment.shippingLine],
@@ -177,6 +193,7 @@ export default async function ShipmentDetailPage({
     {
       heading: "Parties",
       icon: Users,
+      iconClass: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
       fields: [
         ["Shipper", shipment.shipperName ?? "—"],
         ["Consignee", shipment.consigneeName ?? "—"],
@@ -192,6 +209,7 @@ export default async function ShipmentDetailPage({
     {
       heading: "Timeline",
       icon: CalendarClock,
+      iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
       fields: [
         ["Current ETA", shipment.currentEta.toLocaleDateString()],
         [
@@ -267,23 +285,48 @@ export default async function ShipmentDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Shipment Details</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <FileText className="size-3.5" />
+            </span>
+            Shipment Details
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {detailGroups.map((group, i) => (
             <div key={group.heading}>
               {i > 0 && <Separator className="mb-5" />}
-              <h3 className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                <group.icon className="size-3.5" />
+              <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                <span
+                  className={cn(
+                    "flex size-5 items-center justify-center rounded-full",
+                    group.iconClass
+                  )}
+                >
+                  <group.icon className="size-3" />
+                </span>
                 {group.heading}
               </h3>
-              <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-                {group.fields.map(([label, value]) => (
-                  <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-xs text-muted-foreground">{label}</span>
-                    <span className="text-sm">{value}</span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                {group.fields.map(([label, value]) => {
+                  const isEmpty =
+                    typeof value === "string" && EMPTY_FIELD_VALUES.has(value)
+                  return (
+                    <div key={label} className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <span
+                        className={cn(
+                          "text-sm",
+                          isEmpty
+                            ? "text-muted-foreground/70 italic"
+                            : "font-medium text-foreground"
+                        )}
+                      >
+                        {value}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           ))}
@@ -293,7 +336,9 @@ export default async function ShipmentDetailPage({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Container className="size-4.5 text-muted-foreground" />
+            <span className="flex size-7 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400">
+              <Container className="size-3.5" />
+            </span>
             Containers ({shipment.containers.length})
           </CardTitle>
         </CardHeader>
@@ -370,7 +415,12 @@ export default async function ShipmentDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Activity Log</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400">
+              <History className="size-3.5" />
+            </span>
+            Activity Log
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {shipment.auditLogs.length === 0 && (
