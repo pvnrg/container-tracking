@@ -34,6 +34,8 @@ import {
 } from "@/lib/shipment-labels"
 
 import { createShipment } from "../actions"
+import type { ExtractedShipmentData } from "./extract-actions"
+import { OblUploadCard } from "./obl-upload-card"
 
 const containerSchema = z.object({
   containerNumber: z.string().min(1, "Required"),
@@ -81,6 +83,7 @@ export function ShipmentForm() {
   const {
     register,
     control,
+    setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -93,10 +96,37 @@ export function ShipmentForm() {
     },
   })
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "containers",
   })
+
+  // Only overwrite fields the scan actually found, so anything the operator
+  // already typed (or the scan missed) is left alone.
+  const handleExtracted = (_file: File, data: ExtractedShipmentData) => {
+    const opts = { shouldValidate: true, shouldDirty: true } as const
+    if (data.blNumber) setValue("blNumber", data.blNumber, opts)
+    if (data.blType) setValue("blType", data.blType, opts)
+    if (data.shippingLine) setValue("shippingLine", data.shippingLine, opts)
+    if (data.originCountry) setValue("originCountry", data.originCountry, opts)
+    if (data.originPort) setValue("originPort", data.originPort, opts)
+    if (data.dischargePort) setValue("dischargePort", data.dischargePort, opts)
+    if (data.shipperName) setValue("shipperName", data.shipperName, opts)
+    if (data.consigneeName) setValue("consigneeName", data.consigneeName, opts)
+    if (data.notifyParty) setValue("notifyParty", data.notifyParty, opts)
+    if (data.containers.length > 0) {
+      replace(
+        data.containers.map((c) => ({
+          containerNumber: c.containerNumber ?? "",
+          containerType: c.containerType ?? emptyContainer.containerType,
+          sealNumber: c.sealNumber ?? "",
+          grossWeightKg: c.grossWeightKg ?? "",
+          inventoryReference: c.inventoryReference ?? "",
+          itemQuantity: c.itemQuantity ?? "",
+        }))
+      )
+    }
+  }
 
   const onSubmit = async (values: FormValues) => {
     setSubmitError(null)
@@ -122,6 +152,8 @@ export function ShipmentForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      <OblUploadCard onExtracted={handleExtracted} />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2.5">
