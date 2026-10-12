@@ -204,3 +204,34 @@ describe("parseShipmentDocument", () => {
     })
   })
 })
+
+describe("COSCO draft B/L (real PDF text fixture)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const text = require("node:fs").readFileSync(
+    require("node:path").join(__dirname, "__fixtures__/cosco-bl.txt"),
+    "utf8"
+  ) as string
+  const result = parseShipmentDocument(text)
+
+  it("reads vessel and voyage from the 'Ocean Vessel Voy. No.' box", () => {
+    expect(result.vesselName).toBe("HMM CEBU")
+    expect(result.voyageNumber).toBe("030W")
+  })
+
+  it("stops consignee at the next box and reads the notify party", () => {
+    expect(result.consigneeName).toMatch(/^BONUS INDUSTRIES LTD/)
+    expect(result.consigneeName).not.toMatch(/Forwarding/i)
+    expect(result.notifyParty).toMatch(/^BONUS INDUSTRIES LTD/)
+  })
+
+  it("fills seal, type, weight and quantity from the summary rows", () => {
+    expect(result.containers).toHaveLength(3)
+    expect(result.containers[2]).toMatchObject({
+      containerNumber: "CAAU9091850",
+      sealNumber: "31920786",
+      containerType: "40HQ",
+      grossWeightKg: "26144.000",
+      itemQuantity: "61",
+    })
+  })
+})

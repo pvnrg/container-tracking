@@ -55,6 +55,11 @@ const STOP_LABELS = [
   /\bB\/?L\s*(NO\.?|NUMBER|#)/i,
   /\bPARTICULARS\b/i,
   /\bCONTAINER\s*(NO\.?|NUMBER)/i,
+  /\bFORWARDING\s+AGENT\b/i,
+  /\bALSO\s+NOTIFY\b/i,
+  /\bEXPORT\s+REFERENCES?\b/i,
+  /\bPOINT\s+AND\s+COUNTRY\b/i,
+  /\bCOMBINED\s+TRANSPORT\b/i,
 ]
 
 // Real Bill of Lading forms lay fields out as side-by-side boxes (Vessel |
@@ -64,7 +69,8 @@ const STOP_LABELS = [
 // If the text right after a label matches one of these, it's almost always
 // the START of an adjacent box's heading or boilerplate, not this field's
 // value -- so it should be discarded in favor of the line(s) below instead.
-const LABEL_BLEED = /\bPORT\s+OF\b|\bPLACE\s+OF\b|\bCARRIER'?S\b|\bAGENT/i
+const LABEL_BLEED =
+  /\bPORT\s+OF\b|\bPLACE\s+OF\b|\bCARRIER'?S\b|\bAGENT|^VOY(AGE)?\.?\s*(NO\.?|NUMBER)?$/i
 
 function normalizeLines(text: string): string[] {
   return text
@@ -286,6 +292,29 @@ function extractContainers(lines: string[]): ParsedContainer[] {
   return containers
 }
 
+// Some carriers (COSCO) append a per-container summary row on a later page:
+// "CAAU9091850 /31920786 / 61 REELS /FCL/FCL /40HQ/26144.000KGS;50.0000CBM"
+// (number / seal / quantity / movement / type / gross weight). Fill in the
+// seal, type, weight and quantity the first-pass scan couldn't see.
+function enrichFromSummaryRows(
+  lines: string[],
+  containers: ParsedContainer[]
+): ParsedContainer[] {
+  const rowRegex =
+    /\b([A-Z]{4}\d{7})\s*\/\s*([A-Z0-9]+)\s*\/\s*(\d+)\s+[A-Z]+\s*\/[A-Z]+\/[A-Z]+\s*\/(\d{2}[A-Z]{2})\/([\d,]+\.\d+)\s*KGS/i
+  for (const line of lines) {
+    const m = line.match(rowRegex)
+    if (!m) continue
+    const target = containers.find((c) => c.containerNumber === m[1])
+    if (!target) continue
+    target.sealNumber ??= m[2]
+    target.itemQuantity ??= m[3]
+    target.containerType ??= m[4].toUpperCase()
+    target.grossWeightKg ??= m[5].replace(/,/g, "")
+  }
+  return containers
+}
+
 export function parseShipmentDocument(text: string): ParsedShipmentFields {
   const lines = normalizeLines(text)
 
@@ -323,7 +352,18 @@ export function parseShipmentDocument(text: string): ParsedShipmentFields {
       vesselName = separatorMatch[1].trim() || undefined
       voyageNumber = separatorMatch[2].trim() || undefined
     } else {
-      vesselName = vesselVoyageRaw
+      // Some carriers (e.g. COSCO) print "NAME CODE" with just a space --
+      // accept a trailing short token only if it contains a digit, so a
+      // vessel name made of plain words is never split.
+      const spaceMatch = vesselVoyageRaw.match(
+        /^(.*\S)\s+([A-Z]{0,3}\d[A-Z0-9]{1,6})$/i
+      )
+      if (spaceMatch) {
+        vesselName = spaceMatch[1].trim()
+        voyageNumber = spaceMatch[2].trim()
+      } else {
+        vesselName = vesselVoyageRaw
+      }
     }
   }
   if (!voyageNumber) {
@@ -344,7 +384,9 @@ export function parseShipmentDocument(text: string): ParsedShipmentFields {
     dischargePort: matchDischargePort(dischargePortText),
     shipperName: findBlockAfterLabel(lines, /\bSHIPPER\b\s*[:\-]?/i),
     consigneeName: findBlockAfterLabel(lines, /\bCONSIGNEE\b\s*[:\-]?/i),
-    notifyParty: findBlockAfterLabel(lines, /\bNOTIFY\s*PARTIES?\b\s*[:\-]?/i),
-    containers: extractContainers(lines),
+    notifyParty:
+      findBlockAfterLabel(lines, /\bALSO\s+NOTIFY\s*PARTY\b/i) ??
+      findBlockAfterLabel(lines, /\bNOTIFY\s*PARTIES?\b\s*[:\-]?/i),
+    containers: enrichFromSummaryRows(lines, extractContainers(lines)),
   }
 }
