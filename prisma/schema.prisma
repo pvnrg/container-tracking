@@ -107,6 +107,7 @@ model User {
   notifications      Notification[]
   auditLogs          ShipmentAudit[]
   truckStatusUpdates TruckStatusUpdate[]
+  assistantSnoozes   AssistantSnooze[]
 
   @@index([role])
 }
@@ -440,4 +441,22 @@ model ShipmentAudit {
   createdAt DateTime @default(now())
 
   @@index([shipmentId])
+}
+
+// Per-user "snooze" on one of the floating assistant's alerts (see
+// src/lib/assistant-alerts.ts). Alerts themselves aren't stored -- they're
+// recomputed from live data on every request -- so this only records which
+// ones the user asked not to see again until `until`. alertKey embeds the
+// severity, so an alert that escalates (e.g. detention warning -> critical)
+// gets a new key and breaks through an earlier snooze.
+model AssistantSnooze {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alertKey String
+  until    DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, alertKey])
 }
