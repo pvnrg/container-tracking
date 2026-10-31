@@ -30,7 +30,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <AuthSessionProvider>{children}</AuthSessionProvider>
-          <Toaster />
+          {/* Lifted clear of the floating assistant button (bottom-right). */}
+          <Toaster offset={{ bottom: 88 }} mobileOffset={{ bottom: 88 }} />
         </ThemeProvider>
       </body>
     </html>
