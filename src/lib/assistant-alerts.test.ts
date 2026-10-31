@@ -24,6 +24,7 @@ function alert(key: string, severity: AssistantAlert["severity"], shipmentId?: s
 
 const detentionInput: DetentionAlertInput = {
   trackerId: "t1",
+  containerId: "c1",
   containerNumber: "MSKU1234567",
   shipmentId: "s1",
   blNumber: "COSU1",
@@ -90,6 +91,14 @@ describe("buildDetentionAlert", () => {
     const forTransporter = buildDetentionAlert(detentionInput, "transporter")
     expect(forTransporter?.href).toBe("/shipments/s1")
     expect(forTransporter?.title).toBe("Return MSKU1234567 to the depot")
+  })
+
+  it("offers ops a one-click 'mark returned', and transporters nothing", () => {
+    expect(buildDetentionAlert(detentionInput, "ops")?.quickAction).toEqual({
+      type: "markReturned",
+      containerId: "c1",
+    })
+    expect(buildDetentionAlert(detentionInput, "transporter")?.quickAction).toBeUndefined()
   })
 
   it("says how many days overdue a container is", () => {

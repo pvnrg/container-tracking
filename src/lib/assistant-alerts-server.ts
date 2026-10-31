@@ -8,7 +8,8 @@ import {
 import { shipmentScopeWhere } from "./data-scope"
 import { getDetentionRisk } from "./detention"
 import { describeStageSkipAlert, findStageSkipAlert } from "./document-stage-alerts"
-import { formatDate } from "./format"
+import { DOCUMENT_TYPE_LABELS } from "./document-labels"
+import { formatDate, formatDateTime } from "./format"
 import { prisma } from "./prisma"
 import { ARRIVED_OR_LATER_STATUSES } from "./shipment-labels"
 import { getStage2Gaps, STAGE2_GAP_LABELS } from "./stage2-readiness"
@@ -18,6 +19,7 @@ type AssistantSession = {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
+const MAX_DOCUMENT_ALERTS = 5
 
 /**
  * Every alert the floating assistant should show this user right now,
@@ -58,6 +60,7 @@ async function getDetentionAlerts(
     select: {
       id: true,
       deadlineDate: true,
+      containerId: true,
       container: {
         select: {
           containerNumber: true,
@@ -72,6 +75,7 @@ async function getDetentionAlerts(
     const alert = buildDetentionAlert(
       {
         trackerId: t.id,
+        containerId: t.containerId,
         containerNumber: t.container.containerNumber,
         shipmentId: t.container.shipment.id,
         blNumber: t.container.shipment.blNumber,
@@ -93,8 +97,8 @@ async function getOpsAlerts(session: AssistantSession): Promise<AssistantAlert[]
     overdueEtaShipments,
     arrivedAtPort,
     activeForDocCheck,
-    arrivedAtDestination,
-    pendingVerifications,
+    awaitingOffload,
+    pendingDocuments,
     arrivingSoon,
   ] = await Promise.all([
     getDetentionAlerts(scope, "ops"),
@@ -104,7 +108,7 @@ async function getOpsAlerts(session: AssistantSession): Promise<AssistantAlert[]
         status: { notIn: ARRIVED_OR_LATER_STATUSES },
         ...scope,
       },
-      select: { id: true, blNumber: true, currentEta: true },
+      select: { id: true, blNumber: true, currentEta: true, status: true },
       orderBy: { currentEta: "asc" },
     }),
     prisma.shipment.findMany({
@@ -126,11 +130,31 @@ async function getOpsAlerts(session: AssistantSession): Promise<AssistantAlert[]
         transitRateSheet: { select: { finalizedAt: true } },
       },
     }),
-    prisma.shipment.findMany({
-      where: { status: "ARRIVED_DESTINATION", ...scope },
-      select: { id: true, blNumber: true },
+    prisma.container.findMany({
+      where: {
+        actualOffloadedAt: null,
+        shipment: { status: "ARRIVED_DESTINATION", ...scope },
+      },
+      select: {
+        id: true,
+        containerNumber: true,
+        offloadScheduledAt: true,
+        shipment: { select: { id: true, blNumber: true } },
+      },
+      orderBy: [{ offloadScheduledAt: "asc" }, { createdAt: "asc" }],
     }),
-    prisma.document.count({ where: { isVerified: false, shipment: scope } }),
+    prisma.document.findMany({
+      where: { isVerified: false, shipment: scope },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        fileName: true,
+        createdAt: true,
+        shipment: { select: { id: true, blNumber: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
     prisma.shipment.count({
       where: {
         currentEta: { gte: now, lte: new Date(now.getTime() + 7 * DAY_MS) },
@@ -188,28 +212,76 @@ async function getOpsAlerts(session: AssistantSession): Promise<AssistantAlert[]
       actionLabel: "Update ETA",
       href: "/shipments/tracking",
       shipmentId: s.id,
+      quickAction: {
+        type: "updateEta",
+        shipmentId: s.id,
+        status: s.status,
+        currentEta: s.currentEta.toISOString(),
+      },
     })
   }
 
-  for (const s of arrivedAtDestination) {
+  // Offload goes one container at a time per shipment (enforced by
+  // confirmContainerOffload), so only the earliest overdue scheduled
+  // container gets a "confirm" alert -- confirming any other would fail.
+  const confirmableShipments = new Set<string>()
+  for (const c of awaitingOffload) {
+    if (c.offloadScheduledAt === null) {
+      alerts.push({
+        key: `offload-schedule:${c.id}`,
+        severity: "info",
+        kind: "offload",
+        title: `Schedule offload for ${c.containerNumber}`,
+        detail: `${c.shipment.blNumber} is at the destination warehouse`,
+        actionLabel: "Offload page",
+        href: "/shipments/offload",
+        shipmentId: c.shipment.id,
+        quickAction: { type: "scheduleOffload", containerId: c.id },
+      })
+    } else if (
+      c.offloadScheduledAt <= now &&
+      !confirmableShipments.has(c.shipment.id)
+    ) {
+      confirmableShipments.add(c.shipment.id)
+      alerts.push({
+        key: `offload-confirm:${c.id}`,
+        severity: "warning",
+        kind: "offload",
+        title: `Confirm offload of ${c.containerNumber}`,
+        detail: `Was scheduled for ${formatDateTime(c.offloadScheduledAt)} · ${c.shipment.blNumber}`,
+        actionLabel: "Offload page",
+        href: "/shipments/offload",
+        shipmentId: c.shipment.id,
+        quickAction: { type: "confirmOffload", containerId: c.id },
+      })
+    }
+  }
+
+  // The oldest few get their own alert with a one-click verify; the rest
+  // collapse into a single summary so the panel doesn't turn into a
+  // document list.
+  for (const d of pendingDocuments.slice(0, MAX_DOCUMENT_ALERTS)) {
+    const label = d.type ? DOCUMENT_TYPE_LABELS[d.type] : (d.title ?? d.fileName)
     alerts.push({
-      key: `offload:${s.id}`,
+      key: `verify:${d.id}`,
       severity: "info",
-      kind: "offload",
-      title: `${s.blNumber} is at the destination warehouse`,
-      detail: "Confirm arrival and schedule container offload",
-      actionLabel: "Schedule offload",
-      href: "/shipments/offload",
-      shipmentId: s.id,
+      kind: "verify",
+      title: `Verify ${label} on ${d.shipment.blNumber}`,
+      detail: `Uploaded ${formatDate(d.createdAt)} · ${d.fileName}`,
+      actionLabel: "Shipment",
+      href: `/shipments/${d.shipment.id}`,
+      shipmentId: d.shipment.id,
+      quickAction: { type: "verifyDocument", documentId: d.id },
     })
   }
 
-  if (pendingVerifications > 0) {
+  const remainingDocuments = pendingDocuments.length - MAX_DOCUMENT_ALERTS
+  if (remainingDocuments > 0) {
     alerts.push({
       key: "verify-documents",
       severity: "info",
       kind: "verify",
-      title: `${pendingVerifications} document${pendingVerifications === 1 ? "" : "s"} waiting for verification`,
+      title: `${remainingDocuments} more document${remainingDocuments === 1 ? "" : "s"} waiting for verification`,
       detail: "Uploaded but not yet checked",
       actionLabel: "Verify documents",
       href: "/shipments?status=docs-pending",

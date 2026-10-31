@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils"
 
 import { snoozeAssistantAlert } from "./actions"
+import { QuickAction } from "./quick-action"
 
 const REFRESH_MS = 2 * 60 * 1000
 // Once per browser session: open the panel by itself the first time a
@@ -169,6 +170,15 @@ export function AssistantWidget({ firstName }: { firstName: string }) {
   const counts = countBySeverity(sorted)
   const hasCritical = counts.critical > 0
 
+  // A quick action fixed it: drop it now, then re-check, since one fix can
+  // clear or create other alerts (e.g. verifying a document can advance
+  // the shipment's status).
+  function resolve(alert: AssistantAlert) {
+    setAlerts((current) => current?.filter((a) => a.key !== alert.key) ?? null)
+    seenKeys.current?.delete(alert.key)
+    void refresh()
+  }
+
   function snooze(alert: AssistantAlert) {
     setAlerts((current) => current?.filter((a) => a.key !== alert.key) ?? null)
     startSnooze(async () => {
@@ -256,10 +266,18 @@ export function AssistantWidget({ firstName }: { firstName: string }) {
                         )}
                         {alert.detail}
                       </p>
-                      <div className="mt-2 flex items-center gap-1">
+                      <div className="mt-2 flex flex-wrap items-center gap-1">
+                        {alert.quickAction && (
+                          <QuickAction
+                            action={alert.quickAction}
+                            onDone={() => resolve(alert)}
+                          />
+                        )}
                         <Button
                           size="xs"
-                          variant="outline"
+                          // The in-panel fix leads when there is one; the
+                          // full page becomes the secondary route.
+                          variant={alert.quickAction ? "ghost" : "outline"}
                           render={<Link href={alert.href} />}
                           nativeButton={false}
                           onClick={() => setOpen(false)}

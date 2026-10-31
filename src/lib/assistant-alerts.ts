@@ -1,3 +1,5 @@
+import type { ShipmentStatus } from "@prisma/client"
+
 import { DetentionRiskLevel } from "./detention"
 import { formatDate } from "./format"
 
@@ -20,6 +22,18 @@ export type AssistantAlertKind =
   | "arriving"
   | "pickup"
 
+// A fix the user can make right inside the assistant panel, without
+// leaving the page. Each maps onto an existing server action that already
+// enforces role and data-scope checks, so attaching one here never grants
+// anything the user couldn't already do on the full page. Ops-only --
+// transporters can't change data, so their alerts never carry one.
+export type AssistantQuickAction =
+  | { type: "markReturned"; containerId: string }
+  | { type: "scheduleOffload"; containerId: string }
+  | { type: "confirmOffload"; containerId: string }
+  | { type: "updateEta"; shipmentId: string; status: ShipmentStatus; currentEta: string }
+  | { type: "verifyDocument"; documentId: string }
+
 export type AssistantAlert = {
   // Stable across requests, and the snooze key -- see AssistantSnooze in
   // schema.prisma for why severity is part of it where it can change.
@@ -31,6 +45,7 @@ export type AssistantAlert = {
   actionLabel: string
   href: string
   shipmentId?: string
+  quickAction?: AssistantQuickAction
 }
 
 const SEVERITY_RANK: Record<AssistantSeverity, number> = {
@@ -94,6 +109,7 @@ function plural(n: number, word: string) {
 
 export type DetentionAlertInput = {
   trackerId: string
+  containerId: string
   containerNumber: string
   shipmentId: string
   blNumber: string
@@ -135,6 +151,8 @@ export function buildDetentionAlert(
     actionLabel: audience === "transporter" ? "View shipment" : "Open detention",
     href: audience === "transporter" ? `/shipments/${input.shipmentId}` : "/shipments/detention",
     shipmentId: input.shipmentId,
+    quickAction:
+      audience === "ops" ? { type: "markReturned", containerId: input.containerId } : undefined,
   }
 }
 
